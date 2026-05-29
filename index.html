@@ -597,7 +597,7 @@ function addOp(){
   ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',type:'sequential'});
   renderOps();
 }
-}
+
 function removeOp(id){ ops=ops.filter(o=>o.id!==id); renderOps(); recalc(); }
 function opCh(id,f,v){ const o=ops.find(o=>o.id===id); if(o) o[f]=v; recalc(); renderToolOpDDs(); }
 function clearOps(){ if(!confirm('Clear all operations?')) return; ops=[]; opC=0; renderOps(); recalc(); }
