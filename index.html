@@ -763,7 +763,7 @@ function updateProgressReality(){
   else if(impossible||projectedLate||remainingDays<=0){ headline='At risk'; cls='qresult reality bad show'; }
   else if(ahead<0){ headline='Watch closely'; cls='qresult reality warn show'; }
 
-  const cycleSource=actualMin>0?'actual cycle':(bn?`bottleneck OP ${bn.num}`:'no cycle data');
+
   const finishText=finishIso?`Estimated finish: <b>${finishIso}</b>`:'Estimated finish: <b>unknown</b>';
   result.className=cls;
   result.innerHTML=`
