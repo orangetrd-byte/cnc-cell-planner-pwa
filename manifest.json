@@ -2,8 +2,27 @@
   "name": "CNC Cell Planner",
   "short_name": "CNC Planner",
   "description": "Production planning, tooling, progress tracking, and bottleneck reality checks for CNC jobs.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/cnc-cell-planner-pwa/",
+  "scope": "/cnc-cell-planner-pwa/",
+  "id": "/cnc-cell-planner-pwa/",
+  "categories": ["productivity", "business", "utilities"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Open Planner",
+      "short_name": "Planner",
+      "description": "Open the CNC planning dashboard",
+      "url": "./index.html",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "display": "standalone",
   "background_color": "#f5f5f7",
   "theme_color": "#0071e3",
