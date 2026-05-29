@@ -627,7 +627,11 @@ function renderToolOpDDs(){
 }
 
 // TOOLS
-function addTool(){ toolC++; tools.push({id:toolC,pocket:'',desc:'',op:'',type:'insert',unit:'10',usage:'',onhand:''}); renderTools(); recalc(); }
+function addTool(){
+  toolC++;
+  tools.push({id:toolC,pocket:'',desc:'',op:'',type:'insert',unit:'10',usage:'',onhand:''});
+  renderTools();
+}
 function removeTool(id){ tools=tools.filter(t=>t.id!==id); renderTools(); recalc(); }
 function toolCh(id,f,v){ const t=tools.find(t=>t.id===id); if(t) t[f]=v; updateToolCalc(id); save(); }
 function clearTools(){ if(!confirm('Clear all tooling?')) return; tools=[]; toolC=0; renderTools(); recalc(); }
