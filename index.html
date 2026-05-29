@@ -1158,9 +1158,6 @@ async function askAI(){
 load();
 renderH(); renderOps(); renderTools(); loadCycleUnitSetting(); recalc(); loadAISettings(); checkKey();
 
-if('serviceWorker' in navigator && location.protocol !== 'file:'){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
