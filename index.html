@@ -63,7 +63,7 @@ header{background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backd
 .field input,.field select{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;-webkit-appearance:none;appearance:none}
 .field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.12);background:#fff}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
 .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)}
 .stat-label{font-size:11px;font-weight:500;color:var(--text-dim);margin-bottom:5px}
 .stat-val{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--accent);line-height:1}
@@ -157,29 +157,13 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 
 <nav class="app-nav" aria-label="Planner sections">
   <button class="nav-btn active" type="button" data-nav="plan" onclick="showPage('plan')">Plan</button>
+  <button class="nav-btn" type="button" data-nav="workorders" onclick="showPage('workorders')">Travelers</button>
   <button class="nav-btn" type="button" data-nav="operations" onclick="showPage('operations')">Operations</button>
   <button class="nav-btn" type="button" data-nav="progress" onclick="showPage('progress')">Progress</button>
   <button class="nav-btn" type="button" data-nav="tooling" onclick="showPage('tooling')">Tooling</button>
   <button class="nav-btn" type="button" data-nav="reports" onclick="showPage('reports')">Reports</button>
   <button class="nav-btn" type="button" data-nav="assistant" onclick="showPage('assistant')">Assistant</button>
 </nav>
-<script>
-function showPage(page){
-  const target=document.querySelector(`.page-section[data-page="${page}"]`)?page:'plan';
-  document.querySelectorAll('.page-section').forEach(el=>el.classList.toggle('page-active',el.dataset.page===target));
-  document.querySelectorAll('.nav-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.nav===target));
-  try{ localStorage.setItem('cnc-page',target); }catch(e){}
-}
-function loadPage(){
-  document.querySelectorAll('.nav-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>showPage(btn.dataset.nav));
-  });
-  let page='plan';
-  try{ page=localStorage.getItem('cnc-page')||'plan'; }catch(e){}
-  showPage(page);
-}
-document.addEventListener('DOMContentLoaded',loadPage);
-</script>
 
 <div class="main">
 
@@ -233,7 +217,8 @@ document.addEventListener('DOMContentLoaded',loadPage);
     <div class="stat-box"><div class="stat-label">Working Days Available</div><div class="stat-val" id="s-days">--</div><div class="stat-unit">days</div></div>
     <div class="stat-box green"><div class="stat-label">Required Pace</div><div class="stat-val" id="s-pace">--</div><div class="stat-unit">parts / shift</div></div>
     <div class="stat-box orange"><div class="stat-label">Cycle Time Needed</div><div class="stat-val" id="s-cycle">--</div><div class="stat-unit" id="s-cycle-unit">min / part (needed)</div><select id="cycleUnitPref" onchange="setCycleUnitPref(this.value)" style="margin-top:9px;width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:7px 9px;font-family:var(--sans);font-size:12px;outline:none"><option value="auto">Auto units</option><option value="min">Minutes</option><option value="hr">Hours</option></select></div>
-    <div class="stat-box yellow"><div class="stat-label">Total Machine Hours</div><div class="stat-val" id="s-hours">--</div><div class="stat-unit">hrs</div></div>
+    <div class="stat-box yellow"><div class="stat-label">Total Operation Hours</div><div class="stat-val" id="s-total-hours">--</div><div class="stat-unit">hrs sum of ops</div></div>
+    <div class="stat-box orange"><div class="stat-label">Bottleneck Hours</div><div class="stat-val" id="s-bn-hours">--</div><div class="stat-unit">hrs slowest op</div></div>
   </div>
 
   <div class="card page-section page-active" data-page="plan">
@@ -250,6 +235,23 @@ document.addEventListener('DOMContentLoaded',loadPage);
           <button class="btn btn-ghost btn-sm" onclick="clearQuery()">Clear</button>
         </div>
         <div class="qresult" id="qResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card page-section" data-page="workorders">
+    <div class="card-header">
+      <span class="badge">WO</span><h2>Work Orders / Travelers</h2>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="addWO()">+ Add WO</button>
+        <button class="btn btn-red btn-sm" onclick="clearWOs()">Clear WOs</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <p class="tip" style="margin-bottom:11px">Track traveler quantities and release status for phased flow through the shop.</p>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>WO #</th><th>Quantity</th><th>Status</th><th></th></tr></thead>
+        <tbody id="woBody"><tr class="empty-row"><td colspan="4">No work orders — click "+ Add WO" to begin</td></tr></tbody></table>
       </div>
     </div>
   </div>
@@ -292,8 +294,8 @@ document.addEventListener('DOMContentLoaded',loadPage);
     <div class="card-body">
       <p class="tip" style="margin-bottom:11px">Operations numbered 10–100. Enter cycle time per part per operation.</p>
       <div class="tbl-wrap">
-        <table><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Type</th><th></th></tr></thead>
-        <tbody id="opBody"><tr class="empty-row"><td colspan="9">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
+        <table><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Move Qty</th><th>Type</th><th></th></tr></thead>
+        <tbody id="opBody"><tr class="empty-row"><td colspan="10">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
       </div>
     </div>
   </div>
@@ -333,12 +335,16 @@ document.addEventListener('DOMContentLoaded',loadPage);
           <div class="sline"><span class="sl">Deadline</span><span class="sv" id="sum-end">—</span></div>
           <div class="sline"><span class="sl">Working Days</span><span class="sv g" id="sum-days">—</span></div>
           <div class="sline"><span class="sl">Closures</span><span class="sv" id="sum-closures">—</span></div>
+          <div class="sline"><span class="sl">Number WOs</span><span class="sv" id="sum-wo-count">—</span></div>
+          <div class="sline"><span class="sl">Total WO Quantity</span><span class="sv a" id="sum-wo-qty">—</span></div>
         </div>
         <div class="sum-block"><h4>Production</h4>
           <div class="sline"><span class="sl">Required Pace</span><span class="sv a" id="sum-pace">—</span></div>
           <div class="sline"><span class="sl">Cycle Time Needed</span><span class="sv" id="sum-cycle">—</span></div>
           <div class="sline"><span class="sl">Bottleneck Op</span><span class="sv o" id="sum-bn">—</span></div>
-          <div class="sline"><span class="sl">Total Machine Hours</span><span class="sv" id="sum-hours">—</span></div>
+          <div class="sline"><span class="sl">Total Operation Hours</span><span class="sv" id="sum-total-hours">—</span></div>
+          <div class="sline"><span class="sl">Bottleneck Hours</span><span class="sv o" id="sum-bn-hours">—</span></div>
+          <div class="sline"><span class="sl">Machine Hours by Machine</span><span class="sv" id="sum-machine-hours">—</span></div>
           <div class="sline"><span class="sl">Operations</span><span class="sv" id="sum-ops">—</span></div>
           <div class="sline"><span class="sl">Tool Lines</span><span class="sv" id="sum-tools">—</span></div>
           <div class="sline"><span class="sl">Total to Order</span><span class="sv g" id="sum-order">—</span></div>
@@ -403,8 +409,8 @@ document.addEventListener('DOMContentLoaded',loadPage);
 </div>
 <script>
 // STATE
-let ops=[], tools=[], holidays=[];
-let opC=0, toolC=0;
+let ops=[], tools=[], holidays=[], workOrders=[];
+let opC=0, toolC=0, woC=0;
 let aiBusy=false;
 let aiLastAskAt=0;
 const SK='cnc-v1';
@@ -430,6 +436,18 @@ const AI_PROFILES={
 
 function escHtml(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function showPage(page){
+  const target=document.querySelector(`.page-section[data-page="${page}"]`)?page:'plan';
+  document.querySelectorAll('.page-section').forEach(el=>el.classList.toggle('page-active',el.dataset.page===target));
+  document.querySelectorAll('.nav-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.nav===target));
+  try{ localStorage.setItem('cnc-page',target); }catch(e){}
+}
+function loadPage(){
+  let page='plan';
+  try{ page=localStorage.getItem('cnc-page')||'plan'; }catch(e){}
+  showPage(page);
 }
 
 function cycleUnitPref(){
@@ -508,6 +526,24 @@ function jobCapacity(parts,includeSetup=true,availability=1){
   const maxHours=Math.max(...caps.map(c=>c.totalMin/60));
   return {caps,bottleneck,maxShifts,maxHours};
 }
+function operationHourStats(parts){
+  const qty=Math.max(0,parts||0);
+  const byMachine={};
+  let total=0,bottleneck=0,bottleneckOp=null;
+  ops.forEach(o=>{
+    const cycle=opCycleMin(o), setup=opSetupMin(o);
+    if(cycle<=0&&setup<=0) return;
+    const hrs=(setup+(qty*cycle))/60;
+    total+=hrs;
+    const machine=(o.machine||'Unassigned').trim()||'Unassigned';
+    byMachine[machine]=(byMachine[machine]||0)+hrs;
+    if(hrs>bottleneck){ bottleneck=hrs; bottleneckOp=o; }
+  });
+  return {total,bottleneck,bottleneckOp,byMachine};
+}
+function workOrderQty(){
+  return workOrders.reduce((sum,w)=>sum+(parseInt(w.qty)||0),0);
+}
 
 // DATE HELPERS
 function pd(s){
@@ -545,7 +581,7 @@ function save(){
   const fields=['partNum','jobNum','machine','totalParts','shiftHours','daysPerWeek','breakMins','shiftsPerDay','startDate','endDate','doneParts','scrapParts','actualCycle','actualCycleUnit','uptimePct','progressDate'];
   const job={};
   fields.forEach(id=>{ const el=document.getElementById(id); if(el) job[id]=el.value; });
-  try{ localStorage.setItem(SK,JSON.stringify({job,ops,tools,holidays,opC,toolC})); }catch(e){}
+  try{ localStorage.setItem(SK,JSON.stringify({job,ops,tools,holidays,workOrders,opC,toolC,woC})); }catch(e){}
   updateSummary();
 }
 
@@ -555,15 +591,16 @@ function load(){
     if(!raw) return;
     const st=JSON.parse(raw);
     if(st.job) Object.entries(st.job).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
-    ops=st.ops||[]; tools=st.tools||[]; holidays=st.holidays||[];
-    opC=st.opC||ops.length; toolC=st.toolC||tools.length;
+    ops=(st.ops||[]).map(o=>({...o,moveQty:o.moveQty||1}));
+    tools=st.tools||[]; holidays=st.holidays||[]; workOrders=st.workOrders||[];
+    opC=st.opC||ops.length; toolC=st.toolC||tools.length; woC=st.woC||workOrders.length;
   }catch(e){}
 }
 
 function clearAllData(){
   if(!confirm('Clear all data and start fresh?')) return;
   try{ localStorage.removeItem(SK); }catch(e){}
-  ops=[]; tools=[]; holidays=[]; opC=0; toolC=0;
+  ops=[]; tools=[]; holidays=[]; workOrders=[]; opC=0; toolC=0; woC=0;
   ['partNum','jobNum','machine','totalParts','startDate','endDate','doneParts','scrapParts','actualCycle','progressDate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('shiftHours').value='8';
   document.getElementById('daysPerWeek').value='5';
@@ -571,7 +608,7 @@ function clearAllData(){
   document.getElementById('shiftsPerDay').value='1';
   document.getElementById('actualCycleUnit').value='min';
   document.getElementById('uptimePct').value='85';
-  renderH(); renderOps(); renderTools(); recalc();
+  renderH(); renderWOs(); renderOps(); renderTools(); recalc();
 }
 
 // HOLIDAYS
@@ -590,20 +627,40 @@ function renderH(){
     : '<span style="font-size:11px;color:var(--text-dim)">None added</span>';
 }
 
+// WORK ORDERS
+function addWO(){
+  woC++;
+  workOrders.push({id:woC,num:'',qty:'',status:'Not Started'});
+  renderWOs(); recalc();
+}
+function removeWO(id){ workOrders=workOrders.filter(w=>w.id!==id); renderWOs(); recalc(); }
+function woCh(id,f,v){ const w=workOrders.find(w=>w.id===id); if(w) w[f]=v; recalc(); }
+function clearWOs(){ if(!confirm('Clear all work orders?')) return; workOrders=[]; woC=0; renderWOs(); recalc(); }
+function renderWOs(){
+  const tb=document.getElementById('woBody');
+  if(!tb) return;
+  if(!workOrders.length){ tb.innerHTML='<tr class="empty-row"><td colspan="4">No work orders — click "+ Add WO" to begin</td></tr>'; return; }
+  tb.innerHTML=workOrders.map(w=>`<tr>
+    <td><input type="text" value="${escHtml(w.num)}" placeholder="WO-001" oninput="woCh(${w.id},'num',this.value)"></td>
+    <td><input type="number" value="${escHtml(w.qty)}" min="0" placeholder="0" oninput="woCh(${w.id},'qty',this.value)" style="width:90px"></td>
+    <td><select onchange="woCh(${w.id},'status',this.value)"><option ${w.status==='Not Started'?'selected':''}>Not Started</option><option ${w.status==='In Process'?'selected':''}>In Process</option><option ${w.status==='Complete'?'selected':''}>Complete</option><option ${w.status==='Hold'?'selected':''}>Hold</option></select></td>
+    <td><button class="btn btn-red btn-sm" onclick="removeWO(${w.id})">✕</button></td>
+  </tr>`).join('');
+}
+
 // OPS
 function addOp(){
   opC++;
   const num=Math.min(10+(opC-1)*10,100);
-  ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',type:'sequential'});
-  renderOps();
+  ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',moveQty:1,type:'sequential'});
+  renderOps(); recalc();
 }
-
 function removeOp(id){ ops=ops.filter(o=>o.id!==id); renderOps(); recalc(); }
 function opCh(id,f,v){ const o=ops.find(o=>o.id===id); if(o) o[f]=v; recalc(); renderToolOpDDs(); }
 function clearOps(){ if(!confirm('Clear all operations?')) return; ops=[]; opC=0; renderOps(); recalc(); }
 function renderOps(){
   const tb=document.getElementById('opBody');
-  if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="9">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
+  if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="10">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
   tb.innerHTML=ops.map(o=>`<tr>
     <td><span class="op-badge">OP ${o.num}</span></td>
     <td><input type="text" value="${escHtml(o.desc)}" placeholder="e.g. Turn OD" oninput="opCh(${o.id},'desc',this.value)"></td>
@@ -612,6 +669,7 @@ function renderOps(){
     <td><select onchange="opCh(${o.id},'cycleUnit',this.value)" style="width:55px"><option value="min" ${(o.cycleUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.cycleUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
     <td><input type="number" value="${escHtml(o.setup)}" placeholder="0" min="0" step="0.01" oninput="opCh(${o.id},'setup',this.value)" style="width:70px"></td>
     <td><select onchange="opCh(${o.id},'setupUnit',this.value)" style="width:55px"><option value="min" ${(o.setupUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.setupUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
+    <td><input type="number" value="${escHtml(o.moveQty||1)}" min="1" step="1" oninput="opCh(${o.id},'moveQty',this.value)" style="width:70px"></td>
     <td><select onchange="opCh(${o.id},'type',this.value)"><option value="sequential" ${o.type==='sequential'?'selected':''}>Sequential</option><option value="parallel" ${o.type==='parallel'?'selected':''}>Parallel</option></select></td>
     <td><button class="btn btn-red btn-sm" onclick="removeOp(${o.id})">✕</button></td>
   </tr>`).join('');
@@ -627,11 +685,7 @@ function renderToolOpDDs(){
 }
 
 // TOOLS
-function addTool(){
-  toolC++;
-  tools.push({id:toolC,pocket:'',desc:'',op:'',type:'insert',unit:'10',usage:'',onhand:''});
-  renderTools();
-}
+function addTool(){ toolC++; tools.push({id:toolC,pocket:'',desc:'',op:'',type:'insert',unit:'10',usage:'',onhand:''}); renderTools(); recalc(); }
 function removeTool(id){ tools=tools.filter(t=>t.id!==id); renderTools(); recalc(); }
 function toolCh(id,f,v){ const t=tools.find(t=>t.id===id); if(t) t[f]=v; updateToolCalc(id); save(); }
 function clearTools(){ if(!confirm('Clear all tooling?')) return; tools=[]; toolC=0; renderTools(); recalc(); }
@@ -686,19 +740,21 @@ function recalc(){
 
   document.getElementById('s-days').textContent=wd!==null?wd:'--';
 
-  let pace='--',cyc='--',hrs='--',cycMin=0;
+  let pace='--',cyc='--',totalHrs='--',bnHrs='--',cycMin=0;
   if(totalShifts>0&&tp>0){
     const p=tp/totalShifts;
     pace=p.toFixed(1);
     cycMin=net/p;
     cyc=formatCycleTime(cycMin,false);
-    const plan=jobCapacity(tp,true,1);
-    hrs=(plan?plan.maxHours:((tp*cycMin)/60)).toFixed(1);
+    const stats=operationHourStats(tp);
+    totalHrs=stats.total>0?stats.total.toFixed(1):((tp*cycMin)/60).toFixed(1);
+    bnHrs=stats.bottleneck>0?stats.bottleneck.toFixed(1):'--';
   }
   document.getElementById('s-pace').textContent=pace;
   document.getElementById('s-cycle').textContent=cyc;
   document.getElementById('s-cycle-unit').textContent=cycleUnitLabel(cycMin);
-  document.getElementById('s-hours').textContent=hrs;
+  document.getElementById('s-total-hours').textContent=totalHrs;
+  document.getElementById('s-bn-hours').textContent=bnHrs;
 
   renderTools();
   updateProgressReality();
@@ -768,7 +824,6 @@ function updateProgressReality(){
   else if(impossible||projectedLate||remainingDays<=0){ headline='At risk'; cls='qresult reality bad show'; }
   else if(ahead<0){ headline='Watch closely'; cls='qresult reality warn show'; }
 
-
   const finishText=finishIso?`Estimated finish: <b>${finishIso}</b>`:'Estimated finish: <b>unknown</b>';
   result.className=cls;
   result.innerHTML=`
@@ -789,16 +844,19 @@ function updateSummary(){
   const e=document.getElementById('endDate').value;
   const hset=new Set(holidays);
   const wd=workDays(s,e,dpw,hset);
-  let pace='—',cyc='—',hrs='—';
+  let pace='—',cyc='—',totalHrs='—',bnHrs='—';
   const totalShifts=(wd||0)*shiftsPerDay();
   if(totalShifts>0&&tp>0){
     const p=tp/totalShifts; pace=p.toFixed(1)+' pcs/shift';
     const c=netShiftMinutes()/p; cyc=formatCycleTime(c);
-    const plan=jobCapacity(tp,true,1);
-    hrs=(plan?plan.maxHours:((tp*c)/60)).toFixed(1)+' hrs';
+    const stats=operationHourStats(tp);
+    totalHrs=(stats.total>0?stats.total:((tp*c)/60)).toFixed(1)+' hrs';
+    bnHrs=stats.bottleneck>0?stats.bottleneck.toFixed(1)+' hrs':'—';
   }
-  const plan=jobCapacity(tp,true,1);
-  const bn=plan?plan.bottleneck:null;
+  const stats=operationHourStats(tp);
+  const bn=stats.bottleneckOp;
+  const machineHours=Object.entries(stats.byMachine).map(([m,h])=>`${m}: ${h.toFixed(1)}h`).join(' · ');
+  const woQty=workOrderQty();
   let totalOrder=0;
   tools.forEach(t=>{
     const u=parseFloat(t.usage)||0,pk=parseInt(t.unit)||1,oh=parseFloat(t.onhand)||0;
@@ -812,10 +870,14 @@ function updateSummary(){
   document.getElementById('sum-end').textContent=e||'—';
   document.getElementById('sum-days').textContent=wd!==null?wd+' days':'—';
   document.getElementById('sum-closures').textContent=holidays.length+' day(s)';
+  document.getElementById('sum-wo-count').textContent=workOrders.length;
+  document.getElementById('sum-wo-qty').textContent=workOrders.length?woQty.toLocaleString()+' pcs':'—';
   document.getElementById('sum-pace').textContent=pace;
   document.getElementById('sum-cycle').textContent=cyc;
-  document.getElementById('sum-bn').textContent=bn?'OP '+bn.op.num+' ('+formatCycleTime(bn.cycle)+'/part, '+formatCycleTime(bn.setup)+' setup)':'—';
-  document.getElementById('sum-hours').textContent=hrs;
+  document.getElementById('sum-bn').textContent=bn?'OP '+bn.num+' ('+formatCycleTime(opCycleMin(bn))+'/part, '+formatCycleTime(opSetupMin(bn))+' setup)':'—';
+  document.getElementById('sum-total-hours').textContent=totalHrs;
+  document.getElementById('sum-bn-hours').textContent=bnHrs;
+  document.getElementById('sum-machine-hours').textContent=machineHours||'—';
   document.getElementById('sum-ops').textContent=ops.length;
   document.getElementById('sum-tools').textContent=tools.length;
   document.getElementById('sum-order').textContent=tools.length?totalOrder+' pack(s)':'—';
@@ -993,17 +1055,19 @@ function getJobContext(){
   const e=document.getElementById('endDate').value;
   const hset=new Set(holidays);
   const wd=workDays(s,e,dpw,hset);
-  let pace='unknown',cyc='unknown',hrs='unknown';
+  let pace='unknown',cyc='unknown',totalHrs='unknown',bnHrs='unknown';
   if(wd>0&&tp>0){
     const p=tp/(wd*spd); pace=p.toFixed(2)+' parts/shift';
     const c=netShiftMinutes()/p; cyc=formatCycleTime(c)+'/part';
-    const plan=jobCapacity(tp,true,1);
-    hrs=(plan?plan.maxHours:((tp*c)/60)).toFixed(1)+' hrs';
+    const stats=operationHourStats(tp);
+    totalHrs=(stats.total>0?stats.total:((tp*c)/60)).toFixed(1)+' hrs';
+    bnHrs=stats.bottleneck>0?stats.bottleneck.toFixed(1)+' hrs':'unknown';
   }
   const opsText=ops.length?ops.map(o=>{
     const cap=opCapacity(o,tp,true,1);
-    return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, one-time setup=${o.setup||0} ${o.setupUnit||'min'}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
+    return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, one-time setup=${o.setup||0} ${o.setupUnit||'min'}, move qty=${o.moveQty||1}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
   }).join('; '):'None defined';
+  const woText=workOrders.length?workOrders.map(w=>`${w.num||'unnumbered'} qty ${parseInt(w.qty)||0} status ${w.status||'Not Started'}`).join('; '):'None defined';
   const toolsText=tools.length?tools.map(t=>{
     const u=parseFloat(t.usage)||0,pk=parseInt(t.unit)||1,oh=parseFloat(t.onhand)||0;
     const tn=tp>0&&u>0?Math.ceil(tp*u):0;
@@ -1032,7 +1096,10 @@ Plant Closures: ${holidays.length} day(s) — ${holidays.join(', ')||'none'}
 Working Days Available: ${wd!==null?wd:'unknown'}
 Required Pace: ${pace}
 Cycle Time Needed: ${cyc}
-Total Machine Hours: ${hrs}
+Total Operation Hours: ${totalHrs}
+Bottleneck Hours: ${bnHrs}
+Work Orders / Travelers: ${woText}
+Total WO Quantity: ${workOrderQty()}
 Progress As Of: ${asOf}
 Good Parts Completed: ${done}
 Scrap/Rework Parts: ${scrap}
@@ -1161,8 +1228,7 @@ async function askAI(){
 }
 // INIT
 load();
-renderH(); renderOps(); renderTools(); loadCycleUnitSetting(); recalc(); loadAISettings(); checkKey();
-
+renderH(); renderWOs(); renderOps(); renderTools(); loadCycleUnitSetting(); recalc(); loadAISettings(); checkKey(); loadPage();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1171,7 +1237,6 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.error('Service Worker registration failed:', err));
   });
 }
-
 
 </script>
 </body>
