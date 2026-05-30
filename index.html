@@ -645,9 +645,120 @@ function load(){
     tools=st.tools||[]; holidays=st.holidays||[]; workOrders=st.workOrders||[];
     opC=st.opC||ops.length; toolC=st.toolC||tools.length; woC=st.woC||workOrders.length;
   }catch(e){}
+}function currentBackupState(){
+  const fields=[
+    'partNum','jobNum','machine','totalParts',
+    'shiftHours','daysPerWeek','breakMins','shiftsPerDay',
+    'startDate','endDate',
+    'doneParts','scrapParts','actualCycle','actualCycleUnit',
+    'uptimePct','progressDate'
+  ];
+
+  const job={};
+  fields.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) job[id]=el.value;
+  });
+
+  return {
+    app:'cnc-cell-planner',
+    version:1,
+    exportedAt:new Date().toISOString(),
+    job,
+    ops,
+    tools,
+    holidays,
+    workOrders,
+    opC,
+    toolC,
+    woC
+  };
 }
 
-function clearAllData(){
+function exportBackup(){
+  try{
+    save();
+    const backup=currentBackupState();
+    const text=JSON.stringify(backup,null,2);
+    const blob=new Blob([text],{type:'application/json'});
+    const pn=(document.getElementById('partNum')?.value||'cnc-job')
+      .replace(/[^a-z0-9-_]+/gi,'-')
+      .replace(/^-+|-+$/g,'') || 'cnc-job';
+    const date=new Date().toISOString().slice(0,10);
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`${pn}-backup-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    },500);
+  }catch(e){
+    alert('Backup export failed: '+e.message);
+  }
+}
+
+function applyBackupState(st){
+  if(!st||typeof st!=='object') throw new Error('Invalid backup file.');
+
+  const job=st.job||{};
+  Object.entries(job).forEach(([id,v])=>{
+    const el=document.getElementById(id);
+    if(el) el.value=v;
+  });
+
+  ops=(st.ops||[]).map(o=>({...o,moveQty:o.moveQty||1}));
+  tools=st.tools||[];
+  holidays=st.holidays||[];
+  workOrders=(st.workOrders||[]).map(w=>({
+    ...w,
+    currentOp:w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp())
+  }));
+
+  opC=st.opC||ops.length;
+  toolC=st.toolC||tools.length;
+  woC=st.woC||workOrders.length;
+
+  renderH();
+  renderWOs();
+  renderOps();
+  renderTools();
+  recalc();
+  save();
+}
+
+function importBackup(input){
+  const file=input.files&&input.files[0];
+  input.value='';
+  if(!file) return;
+
+  const reader=new FileReader();
+
+  reader.onload=()=>{
+    try{
+      const st=JSON.parse(reader.result);
+      if(st.app&&st.app!=='cnc-cell-planner'){
+        if(!confirm('This does not look like a CNC Cell Planner backup. Import anyway?')) return;
+      }
+      if(!confirm('Import backup and replace current job data?')) return;
+      applyBackupState(st);
+      alert('Backup imported.');
+    }catch(e){
+      alert('Backup import failed: '+e.message);
+    }
+  };
+
+  reader.onerror=()=>{
+    alert('Could not read backup file.');
+  };
+
+  reader.readAsText(file);
+}
+
+function clearAllData(){<button class="btn btn-ghost btn-sm" onclick="exportBackup()">Export Backup</button>
+<button class="btn btn-ghost btn-sm" onclick="document.getElementById('backupFile').click()">Import Backup</button>
+<input type="file" id="backupFile" accept="application/json,.json" style="display:none" onchange="importBackup(this)">
   if(!confirm('Clear all data and start fresh?')) return;
   try{ localStorage.removeItem(SK); }catch(e){}
   ops=[]; tools=[]; holidays=[]; workOrders=[]; opC=0; toolC=0; woC=0;
