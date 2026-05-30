@@ -775,7 +775,7 @@ function importBackup(input){
   reader.readAsText(file);
 }
 
-function clearAllData()
+function clearAllData(){
   if(!confirm('Clear all data and start fresh?')) return;
   try{ localStorage.removeItem(SK); }catch(e){}
   ops=[]; tools=[]; holidays=[]; workOrders=[]; opC=0; toolC=0; woC=0;
