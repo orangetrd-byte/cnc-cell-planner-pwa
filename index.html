@@ -153,8 +153,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     <p>UNIVERSAL PRODUCTION &amp; TOOLING CALCULATOR · ANY SHOP · ANY JOB</p>
   </div>
   <div class="hright">
-  <button class="btn btn-ghost btn-sm" onclick="clearAllData()">🗑 Clear</button>
-
+  <button class="btn btn-ghost btn-sm" onclick="backupAndReset()">💾 Reset</button>
+    
   <button class="btn btn-ghost btn-sm" onclick="exportBackup()">Export</button>
 
   <button class="btn btn-ghost btn-sm"
@@ -774,7 +774,19 @@ function importBackup(input){
 
   reader.readAsText(file);
 }
+function backupAndReset(){
+  const doBackup=confirm(
+    'Download a backup before clearing?\n\nOK = Backup & Reset\nCancel = Continue'
+  );
 
+  if(doBackup){
+    exportBackup();
+  }
+
+  setTimeout(()=>{
+    clearAllData();
+  },500);
+}
 function clearAllData(){
   if(!confirm('Clear all data and start fresh?')) return;
   try{ localStorage.removeItem(SK); }catch(e){}
