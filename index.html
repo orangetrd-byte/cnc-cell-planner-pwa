@@ -645,7 +645,8 @@ function load(){
     tools=st.tools||[]; holidays=st.holidays||[]; workOrders=st.workOrders||[];
     opC=st.opC||ops.length; toolC=st.toolC||tools.length; woC=st.woC||workOrders.length;
   }catch(e){}
-}function currentBackupState(){
+}
+  function currentBackupState(){
   const fields=[
     'partNum','jobNum','machine','totalParts',
     'shiftHours','daysPerWeek','breakMins','shiftsPerDay',
@@ -756,9 +757,7 @@ function importBackup(input){
   reader.readAsText(file);
 }
 
-function clearAllData(){<button class="btn btn-ghost btn-sm" onclick="exportBackup()">Export Backup</button>
-<button class="btn btn-ghost btn-sm" onclick="document.getElementById('backupFile').click()">Import Backup</button>
-<input type="file" id="backupFile" accept="application/json,.json" style="display:none" onchange="importBackup(this)">
+function clearAllData()
   if(!confirm('Clear all data and start fresh?')) return;
   try{ localStorage.removeItem(SK); }catch(e){}
   ops=[]; tools=[]; holidays=[]; workOrders=[]; opC=0; toolC=0; woC=0;
