@@ -272,8 +272,9 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     </div>
     <div class="card-body">
       <p class="tip" style="margin-bottom:11px">Track traveler quantities and release status for phased flow through the shop.</p>
+      <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>WO #</th><th>Quantity</th><th>Current Op</th><th>Status</th><th></th><th></th></tr></thead>
+        <table><thead><tr><th>WO #</th><th>Qty</th><th>Current Op</th><th>Status</th><th>Done Ops</th><th>Advance</th><th></th></tr></thead>
 <tbody id="woBody"><tr class="empty-row"><td colspan="6">No work orders — click "+ Add WO" to begin</td></tr></tbody></table>
     </div>
   </div>
@@ -660,7 +661,7 @@ function load(){
     const st=JSON.parse(raw);
     if(st.job) Object.entries(st.job).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
     ops=(st.ops||[]).map(o=>({...o,moveQty:o.moveQty||1}));
-    tools=st.tools||[]; holidays=st.holidays||[]; workOrders=st.workOrders||[];
+    tools=st.tools||[]; holidays=st.holidays||[]; workOrders=(st.workOrders||[]).map(normalizeWO);
     opC=st.opC||ops.length; toolC=st.toolC||tools.length; woC=st.woC||workOrders.length;
   }catch(e){}
 }
@@ -732,8 +733,9 @@ function applyBackupState(st){
   holidays=st.holidays||[];
   workOrders=(st.workOrders||[]).map(w=>({
     ...w,
-    currentOp:w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp())
-  }));
+    currentOp:w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp()),
+    completedOps:Array.isArray(w.completedOps)?w.completedOps:[]
+  })).map(normalizeWO);
 
   opC=st.opC||ops.length;
   toolC=st.toolC||tools.length;
@@ -854,10 +856,47 @@ function currentOpOptions(cur){
   opts+=`<option value="COMPLETE" ${cur==='COMPLETE'?'selected':''}>COMPLETE</option>`;
   return opts;
 }
+function normalizeWO(w){
+  const wo={
+    id:w.id,
+    num:w.num||'',
+    qty:w.qty||'',
+    currentOp:w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp()),
+    status:w.status||'Not Started',
+    completedOps:Array.isArray(w.completedOps)?w.completedOps.map(String):[]
+  };
+  if(wo.status==='Complete') wo.currentOp='COMPLETE';
+  if(!wo.currentOp) wo.currentOp=firstRouteOp();
+  wo.completedOps=[...new Set(wo.completedOps)];
+  return wo;
+}
+function completedOpsText(w){
+  const done=Array.isArray(w.completedOps)?w.completedOps:[];
+  return done.length?done.map(x=>'OP '+x).join(' > '):'--';
+}
+function renderWOSummary(){
+  const el=document.getElementById('woSummary');
+  if(!el) return;
+  if(!workOrders.length){
+    el.innerHTML='<span style="font-size:11px;color:var(--text-dim)">No travelers released</span>';
+    return;
+  }
+  const route=routeOps();
+  const counts={Complete:0};
+  route.forEach(o=>counts['OP '+o.num]=0);
+  workOrders.forEach(raw=>{
+    const w=normalizeWO(raw);
+    if(w.status==='Complete'||w.currentOp==='COMPLETE') counts.Complete++;
+    else if(w.currentOp) counts['OP '+w.currentOp]=(counts['OP '+w.currentOp]||0)+1;
+  });
+  const chips=route.map(o=>`<div class="chip">OP ${o.num}: ${counts['OP '+o.num]||0}</div>`);
+  chips.push(`<div class="chip">Complete: ${counts.Complete||0}</div>`);
+  el.innerHTML=chips.join('');
+}
 // WORK ORDERS
 function addWO(){
   woC++;
-  workOrders.push({id:woC,num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started'});
+  workOrders.push({id:woC,num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started',completedOps:[]});
   renderWOs(); recalc();
 }
 function removeWO(id){ workOrders=workOrders.filter(w=>w.id!==id); renderWOs(); recalc(); }
@@ -867,16 +906,25 @@ function woCh(id,f,v){
     w[f]=v;
     if(f==='currentOp'&&v==='COMPLETE') w.status='Complete';
     if(f==='currentOp'&&v!=='COMPLETE'&&w.status==='Complete') w.status='In Process';
+    if(f==='status'&&v==='Complete') w.currentOp='COMPLETE';
+    if(f==='status'&&v!=='Complete'&&w.currentOp==='COMPLETE') w.currentOp=firstRouteOp();
   }
   recalc();
 }
 function advanceWO(id){
   const w=workOrders.find(w=>w.id===id);
-  if(!w) return;
-  w.currentOp=nextRouteOp(w.currentOp||firstRouteOp());
+  if(!w||w.status==='Hold'||w.status==='Complete') return;
+  const route=routeOps();
+  if(!route.length) return;
+  const current=String(w.currentOp||firstRouteOp());
+  const idx=route.findIndex(o=>String(o.num)===current);
+  const done=new Set(Array.isArray(w.completedOps)?w.completedOps.map(String):[]);
+  if(idx>=0) done.add(String(route[idx].num));
+  w.completedOps=[...done];
+  w.currentOp=nextRouteOp(current);
   if(w.currentOp==='COMPLETE') w.status='Complete';
   else if(!w.status||w.status==='Not Started') w.status='In Process';
-  renderWOs(); recalc();
+  renderWOs(); recalc(); save();
 }
 function clearWOs(){
   if(!confirm('Clear all work orders?')) return;
@@ -889,6 +937,8 @@ function clearWOs(){
 function renderWOs(){
   const tb=document.getElementById('woBody');
   if(!tb) return;
+  workOrders=workOrders.map(normalizeWO);
+  renderWOSummary();
 
   if(!workOrders.length){
     tb.innerHTML=
@@ -927,12 +977,16 @@ function renderWOs(){
             <option ${w.status==='Not Started'?'selected':''}>Not Started</option>
             <option ${w.status==='In Process'?'selected':''}>In Process</option>
             <option ${w.status==='Complete'?'selected':''}>Complete</option>
+            <option ${w.status==='Hold'?'selected':''}>Hold</option>
           </select>
         </td>
 
+        <td><span class="cv">${completedOpsText(w)}</span></td>
+
         <td>
           <button class="btn btn-primary btn-sm"
-                  onclick="advanceWO(${w.id})">
+                  onclick="advanceWO(${w.id})"
+                  ${w.status==='Hold'||w.status==='Complete'?'disabled':''}>
             ▶
           </button>
         </td>
@@ -952,11 +1006,11 @@ function addOp(){
   opC++;
   const num=Math.min(10+(opC-1)*10,100);
   ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',moveQty:1,type:'sequential'});
-  renderOps(); recalc();
+  renderOps(); renderWOs(); recalc();
 }
-function removeOp(id){ ops=ops.filter(o=>o.id!==id); renderOps(); recalc(); }
-function opCh(id,f,v){ const o=ops.find(o=>o.id===id); if(o) o[f]=v; recalc(); renderToolOpDDs(); }
-function clearOps(){ if(!confirm('Clear all operations?')) return; ops=[]; opC=0; renderOps(); recalc(); }
+function removeOp(id){ ops=ops.filter(o=>o.id!==id); renderOps(); renderWOs(); recalc(); }
+function opCh(id,f,v){ const o=ops.find(o=>o.id===id); if(o) o[f]=v; recalc(); renderToolOpDDs(); renderWOs(); }
+function clearOps(){ if(!confirm('Clear all operations?')) return; ops=[]; opC=0; renderOps(); renderWOs(); recalc(); }
 function renderOps(){
   const tb=document.getElementById('opBody');
   if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="10">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
@@ -1366,7 +1420,10 @@ function getJobContext(){
     const cap=opCapacity(o,tp,true,1);
     return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, one-time setup=${o.setup||0} ${o.setupUnit||'min'}, move qty=${o.moveQty||1}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
   }).join('; '):'None defined';
-  const woText=workOrders.length?workOrders.map(w=>`${w.num||'unnumbered'} qty ${parseInt(w.qty)||0} status ${w.status||'Not Started'}`).join('; '):'None defined';
+  const woText=workOrders.length?workOrders.map(raw=>{
+    const w=normalizeWO(raw);
+    return `${w.num||'unnumbered'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done ${completedOpsText(w)}`;
+  }).join('; '):'None defined';
   const toolsText=tools.length?tools.map(t=>{
     const u=parseFloat(t.usage)||0,pk=parseInt(t.unit)||1,oh=parseFloat(t.onhand)||0;
     const tn=tp>0&&u>0?Math.ceil(tp*u):0;
