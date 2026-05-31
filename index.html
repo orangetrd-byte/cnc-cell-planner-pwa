@@ -138,6 +138,19 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .ai-key-grid input{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--mono);font-size:12px;outline:none;width:100%}
 .ai-key-grid input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.12);background:#fff}
 @media(max-width:600px){.ai-key-grid{grid-template-columns:1fr}}
+@media print{
+  @page{margin:.45in}
+  body{background:#fff;color:#000}
+  header,.app-nav,.page-section:not([data-page="reports"]){display:none!important}
+  .main{display:block;max-width:none;margin:0;padding:0}
+  .page-section[data-page="reports"]{display:block!important;border:none;box-shadow:none;overflow:visible}
+  .page-section[data-page="reports"] .card-header{background:#fff;border-top:none;border-bottom:2px solid #000;padding:0 0 10px}
+  .page-section[data-page="reports"] .card-header button{display:none!important}
+  .page-section[data-page="reports"] .card-body{padding:14px 0 0}
+  .sum-grid{grid-template-columns:1fr 1fr;gap:12px}
+  .sum-block{break-inside:avoid;background:#fff;border:1px solid #999}
+  .sline{border-bottom:1px solid #ddd}
+}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
@@ -231,6 +244,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
               <div class="field" style="margin:0"><label>Through</label><input type="date" id="hEndInput"></div>
               <button class="btn btn-ghost btn-sm" onclick="addHoliday()">+ Add Dates</button>
               <button class="btn btn-ghost btn-sm" onclick="loadGovHolidays()">Load US Gov Holidays</button>
+              <button class="btn btn-red btn-sm" onclick="clearHolidays()">Clear Closures</button>
             </div>
             <div class="hchips" id="hList"></div>
             <p class="tip">Added dates excluded from working day count. Delete any holidays your shop does not observe.</p>
@@ -872,6 +886,15 @@ function addHoliday(){
   renderH(); recalc();
 }
 function removeH(d){ holidays=holidays.filter(x=>x!==d); renderH(); recalc(); }
+function clearHolidays(){
+  if(!holidays.length) return;
+  if(!confirm('Clear all plant closures and holidays?')) return;
+  holidays=[];
+  document.getElementById('hInput').value='';
+  document.getElementById('hEndInput').value='';
+  renderH();
+  recalc();
+}
 function renderH(){
   const el=document.getElementById('hList');
   el.innerHTML=holidays.length
