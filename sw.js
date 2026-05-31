@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v8-travelers';
+const CACHE_NAME = 'cnc-cell-planner-v9-polish';
 const APP_SHELL = [
   './',
   './index.html',

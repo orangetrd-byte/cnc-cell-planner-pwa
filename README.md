@@ -16,7 +16,7 @@ The project started as a cycle-time calculator and is evolving into a shop-floor
 - Progress tracker and bottleneck reality check
 - Tooling tracker with usage and order estimates
 - Reports tab with operation hours, bottleneck hours, work order totals, and machine hours
-- Assistant tab with Gemini/Grok API key support
+- Assistant tab with Google Gemini, OpenAI, Anthropic Claude, xAI Grok, and Groq API key support
 - Export backup to JSON
 - Import backup from JSON
 - Reset flow with backup option

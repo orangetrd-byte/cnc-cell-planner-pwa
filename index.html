@@ -134,6 +134,10 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .ai-msg-err{background:var(--red-light);color:var(--red);align-self:flex-start}
 .ai-thinking{background:var(--surface2);color:var(--text-dim);align-self:flex-start;font-style:italic;font-size:12px}
 .masked-key{-webkit-text-security:disc;text-security:disc}
+.ai-key-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.ai-key-grid input{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--mono);font-size:12px;outline:none;width:100%}
+.ai-key-grid input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.12);background:#fff}
+@media(max-width:600px){.ai-key-grid{grid-template-columns:1fr}}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
@@ -316,7 +320,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
       </div>
     </div>
     <div class="card-body">
-      <p class="tip" style="margin-bottom:11px">Operations numbered 10–100. Enter cycle time per part per operation.</p>
+      <p class="tip" style="margin-bottom:11px">Operation numbers start at 10 and step by 10. Enter cycle time per part per operation.</p>
       <div class="tbl-wrap">
         <table><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Move Qty</th><th>Type</th><th></th></tr></thead>
         <tbody id="opBody"><tr class="empty-row"><td colspan="10">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
@@ -396,8 +400,11 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
               <label>Provider</label>
               <select id="ai-provider" onchange="saveAISettings()">
                 <option value="auto">Auto switch</option>
-                <option value="gemini">Gemini</option>
-                <option value="grok">Grok</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic Claude</option>
+                <option value="grok">xAI Grok</option>
+                <option value="groq">Groq</option>
               </select>
             </div>
             <div class="field" style="margin:0">
@@ -409,15 +416,18 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
               </select>
             </div>
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <input type="text" id="gemini-key" class="masked-key" placeholder="Gemini API key (AIza...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--mono);font-size:12px;outline:none">
-            <input type="text" id="grok-key" class="masked-key" placeholder="Grok / xAI API key (xai-...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--mono);font-size:12px;outline:none">
+          <div class="ai-key-grid">
+            <input type="text" id="gemini-key" class="masked-key" placeholder="Gemini API key (AIza...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other">
+            <input type="text" id="openai-key" class="masked-key" placeholder="OpenAI API key (sk-...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other">
+            <input type="text" id="anthropic-key" class="masked-key" placeholder="Anthropic API key (sk-ant-...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other">
+            <input type="text" id="grok-key" class="masked-key" placeholder="xAI Grok API key (xai-...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other">
+            <input type="text" id="groq-key" class="masked-key" placeholder="Groq API key (gsk_...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" data-lpignore="true" data-form-type="other">
           </div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-primary btn-sm" onclick="saveKey()">Save</button>
             <button class="btn btn-red btn-sm" onclick="clearKey()">Clear</button>
           </div>
-          <p class="tip">Gemini keys come from aistudio.google.com. Grok keys come from console.x.ai.</p>
+          <p class="tip">Keys stay in this browser. Some providers may require a small server proxy if their API blocks direct browser calls.</p>
         </div>
       </div>
       <div id="chat-log" style="min-height:80px;max-height:320px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px">
@@ -441,6 +451,8 @@ const SK='cnc-v1';
 const GOV_HOLIDAY_SPAN=2;
 const AI_PROFILES={
   gemini:{
+    label:'Gemini',
+    keyId:'gemini-key',
     balanced:[
       {provider:'gemini',model:'gemini-2.5-flash',label:'Gemini 2.5 Flash'},
       {provider:'gemini',model:'gemini-2.5-flash-lite',label:'Gemini 2.5 Flash-Lite'}
@@ -449,12 +461,44 @@ const AI_PROFILES={
       {provider:'gemini',model:'gemini-2.5-flash-lite',label:'Gemini 2.5 Flash-Lite'}
     ]
   },
+  openai:{
+    label:'OpenAI',
+    keyId:'openai-key',
+    balanced:[
+      {provider:'openai',model:'gpt-4.1-mini',label:'OpenAI GPT-4.1 Mini'}
+    ],
+    light:[
+      {provider:'openai',model:'gpt-4.1-mini',label:'OpenAI GPT-4.1 Mini'}
+    ]
+  },
+  anthropic:{
+    label:'Claude',
+    keyId:'anthropic-key',
+    balanced:[
+      {provider:'anthropic',model:'claude-sonnet-4-20250514',label:'Claude Sonnet 4'}
+    ],
+    light:[
+      {provider:'anthropic',model:'claude-3-5-haiku-20241022',label:'Claude 3.5 Haiku'}
+    ]
+  },
   grok:{
+    label:'Grok',
+    keyId:'grok-key',
     balanced:[
       {provider:'grok',model:'grok-4.3',label:'Grok 4.3'}
     ],
     light:[
-      {provider:'grok',model:'grok-4.3',reasoning:'none',label:'Grok 4.3 Light'}
+      {provider:'grok',model:'grok-4-1-fast-non-reasoning',reasoning:'none',label:'Grok 4.1 Fast'}
+    ]
+  },
+  groq:{
+    label:'Groq',
+    keyId:'groq-key',
+    balanced:[
+      {provider:'groq',model:'llama-3.3-70b-versatile',label:'Groq Llama 3.3 70B'}
+    ],
+    light:[
+      {provider:'groq',model:'openai/gpt-oss-20b',label:'Groq GPT-OSS 20B'}
     ]
   }
 };
@@ -1063,7 +1107,8 @@ function renderWOs(){
 // OPS
 function addOp(){
   opC++;
-  const num=Math.min(10+(opC-1)*10,100);
+  const nums=ops.map(o=>parseFloat(o.num)).filter(Number.isFinite);
+  const num=nums.length?Math.max(...nums)+10:10;
   ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',moveQty:1,type:'sequential'});
   renderOps(); renderWOs(); recalc();
 }
@@ -1413,47 +1458,49 @@ function saveAISettings(){
 function loadAISettings(){
   const provider=localStorage.getItem('ai-provider')||'auto';
   const mode=localStorage.getItem('ai-mode')||'auto';
-  const gemini=localStorage.getItem('gemini-key')||'';
-  const grok=localStorage.getItem('grok-key')||'';
   const providerEl=document.getElementById('ai-provider');
   const modeEl=document.getElementById('ai-mode');
   if(providerEl) providerEl.value=provider;
   if(modeEl) modeEl.value=mode;
-  if(gemini) document.getElementById('gemini-key').value=gemini;
-  if(grok) document.getElementById('grok-key').value=grok;
+  Object.values(AI_PROFILES).forEach(profile=>{
+    const el=document.getElementById(profile.keyId);
+    if(el) el.value=localStorage.getItem(profile.keyId)||'';
+  });
 }
 function loadCycleUnitSetting(){
   const el=document.getElementById('cycleUnitPref');
   if(el) el.value=cycleUnitPref();
 }
 function saveKey(){
-  const gemini=document.getElementById('gemini-key').value.trim();
-  const grok=document.getElementById('grok-key').value.trim();
-  if(!gemini&&!grok){ alert('Enter a Gemini key, a Grok key, or both.'); return; }
-  if(gemini) localStorage.setItem('gemini-key',gemini); else localStorage.removeItem('gemini-key');
-  if(grok) localStorage.setItem('grok-key',grok); else localStorage.removeItem('grok-key');
+  let saved=0;
+  Object.values(AI_PROFILES).forEach(profile=>{
+    const key=(document.getElementById(profile.keyId)?.value||'').trim();
+    if(key){ localStorage.setItem(profile.keyId,key); saved++; }
+    else localStorage.removeItem(profile.keyId);
+  });
+  if(!saved){ alert('Enter at least one API key.'); return; }
   saveAISettings();
   document.getElementById('key-input-area').style.display='none';
 }
 function clearKey(){
-  localStorage.removeItem('gemini-key');
-  localStorage.removeItem('grok-key');
-  document.getElementById('gemini-key').value='';
-  document.getElementById('grok-key').value='';
+  Object.values(AI_PROFILES).forEach(profile=>{
+    localStorage.removeItem(profile.keyId);
+    const el=document.getElementById(profile.keyId);
+    if(el) el.value='';
+  });
   checkKey();
 }
 function checkKey(){
   const provider=localStorage.getItem('ai-provider')||'auto';
   const mode=localStorage.getItem('ai-mode')||'auto';
-  const hasGemini=!!localStorage.getItem('gemini-key');
-  const hasGrok=!!localStorage.getItem('grok-key');
+  const saved=Object.values(AI_PROFILES).filter(profile=>!!localStorage.getItem(profile.keyId));
   const status=document.getElementById('ai-status');
-  if(!hasGemini&&!hasGrok){
+  if(!saved.length){
     status.textContent='No key set';
     status.style.color='var(--text-dim)';
     return;
   }
-  const keys=[hasGemini?'Gemini':null,hasGrok?'Grok':null].filter(Boolean).join(' + ');
+  const keys=saved.map(profile=>profile.label).join(' + ');
   status.textContent=`${provider}/${mode} · ${keys}`;
   status.style.color='var(--green)';
 }
@@ -1537,20 +1584,18 @@ function addMsg(text,type){
 function getAIPlan(){
   const provider=localStorage.getItem('ai-provider')||'auto';
   const mode=localStorage.getItem('ai-mode')||'auto';
-  const hasGemini=!!localStorage.getItem('gemini-key');
-  const hasGrok=!!localStorage.getItem('grok-key');
   const add=(list,profile)=>profile.forEach(p=>{ if(!list.some(x=>x.provider===p.provider&&x.model===p.model&&x.reasoning===p.reasoning)) list.push(p); });
   const plan=[];
-  const geminiFirst=mode==='light'?AI_PROFILES.gemini.light:AI_PROFILES.gemini.balanced;
-  const geminiFallback=mode==='balanced'?[]:AI_PROFILES.gemini.light;
-  const grokFirst=mode==='light'?AI_PROFILES.grok.light:AI_PROFILES.grok.balanced;
-  const grokFallback=mode==='balanced'?[]:AI_PROFILES.grok.light;
-  if((provider==='gemini'||provider==='auto')&&hasGemini){ add(plan,geminiFirst); add(plan,geminiFallback); }
-  if((provider==='grok'||provider==='auto')&&hasGrok){ add(plan,grokFirst); add(plan,grokFallback); }
-  if(provider==='auto'&&mode!=='balanced'){
-    if(hasGemini) add(plan,AI_PROFILES.gemini.light);
-    if(hasGrok) add(plan,AI_PROFILES.grok.light);
-  }
+  const providerOrder=['gemini','openai','anthropic','grok','groq'];
+  providerOrder.forEach(id=>{
+    const profile=AI_PROFILES[id];
+    if(!profile||!localStorage.getItem(profile.keyId)) return;
+    if(provider!==id&&provider!=='auto') return;
+    const first=mode==='light'?profile.light:profile.balanced;
+    const fallback=mode==='balanced'?[]:profile.light;
+    add(plan,first);
+    add(plan,fallback);
+  });
   return plan;
 }
 function isQuotaError(data,status){
@@ -1571,6 +1616,55 @@ async function callGemini(profile,prompt){
   const data=await res.json().catch(()=>({error:{message:'Invalid Gemini response'}}));
   if(!res.ok||data.error) return {ok:false,data,status:res.status,quota:isQuotaError(data,res.status),message:data.error?.message||'Gemini request failed'};
   return {ok:true,text:data.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.'};
+}
+function extractOpenAIText(data){
+  if(data.output_text) return data.output_text;
+  const parts=[];
+  (data.output||[]).forEach(item=>{
+    (item.content||[]).forEach(content=>{
+      if(content.text) parts.push(content.text);
+      else if(content.type==='output_text'&&content.text) parts.push(content.text);
+    });
+  });
+  return parts.join('\n').trim();
+}
+async function callOpenAI(profile,prompt,q){
+  const key=localStorage.getItem('openai-key');
+  const res=await fetch('https://api.openai.com/v1/responses',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({
+      model:profile.model,
+      instructions:prompt,
+      input:q,
+      max_output_tokens:500,
+      temperature:0.4
+    })
+  });
+  const data=await res.json().catch(()=>({error:{message:'Invalid OpenAI response'}}));
+  if(!res.ok||data.error) return {ok:false,data,status:res.status,quota:isQuotaError(data,res.status),message:data.error?.message||'OpenAI request failed'};
+  return {ok:true,text:extractOpenAIText(data)||'No response received.'};
+}
+async function callAnthropic(profile,prompt,q){
+  const key=localStorage.getItem('anthropic-key');
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:profile.model,
+      system:prompt,
+      max_tokens:500,
+      messages:[{role:'user',content:q}]
+    })
+  });
+  const data=await res.json().catch(()=>({error:{message:'Invalid Anthropic response'}}));
+  if(!res.ok||data.error) return {ok:false,data,status:res.status,quota:isQuotaError(data,res.status),message:data.error?.message||'Anthropic request failed'};
+  return {ok:true,text:(data.content||[]).map(part=>part.text||'').join('\n').trim()||'No response received.'};
 }
 async function callGrok(profile,prompt,q){
   const key=localStorage.getItem('grok-key');
@@ -1593,15 +1687,38 @@ async function callGrok(profile,prompt,q){
   if(!res.ok||data.error) return {ok:false,data,status:res.status,quota:isQuotaError(data,res.status),message:data.error?.message||'Grok request failed'};
   return {ok:true,text:data.choices?.[0]?.message?.content||'No response received.'};
 }
+async function callGroq(profile,prompt,q){
+  const key=localStorage.getItem('groq-key');
+  const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({
+      model:profile.model,
+      messages:[
+        {role:'system',content:prompt},
+        {role:'user',content:q}
+      ],
+      max_tokens:500,
+      temperature:0.4
+    })
+  });
+  const data=await res.json().catch(()=>({error:{message:'Invalid Groq response'}}));
+  if(!res.ok||data.error) return {ok:false,data,status:res.status,quota:isQuotaError(data,res.status),message:data.error?.message||'Groq request failed'};
+  return {ok:true,text:data.choices?.[0]?.message?.content||'No response received.'};
+}
 async function callAIProfile(profile,prompt,q){
-  return profile.provider==='gemini'?callGemini(profile,prompt+'\n\nUser question: '+q):callGrok(profile,prompt,q);
+  if(profile.provider==='gemini') return callGemini(profile,prompt+'\n\nUser question: '+q);
+  if(profile.provider==='openai') return callOpenAI(profile,prompt,q);
+  if(profile.provider==='anthropic') return callAnthropic(profile,prompt,q);
+  if(profile.provider==='groq') return callGroq(profile,prompt,q);
+  return callGrok(profile,prompt,q);
 }
 async function askAI(){
   if(aiBusy) return;
   const now=Date.now();
   if(now-aiLastAskAt<1500) return;
   const plan=getAIPlan();
-  if(!plan.length){ alert('Set a Gemini or Grok API key first — tap ⚙ API Key.'); return; }
+  if(!plan.length){ alert('Set at least one Assistant API key first — tap ⚙ API Key.'); return; }
   const input=document.getElementById('ai-input');
   const btn=document.getElementById('ask-btn');
   const q=input.value.trim();
@@ -1626,13 +1743,13 @@ async function askAI(){
     }
     thinking.remove();
     if(!result||!result.ok){
-      addMsg(lastErr||'All available AI routes are over quota. Try again later, or switch provider/mode under API Key.','err');
+      addMsg(lastErr||'All available AI routes are unavailable. Try again later, or switch provider/mode under API Key.','err');
       return;
     }
     addMsg(result.text,'bot');
   }catch(e){
     thinking.remove();
-    addMsg('Network error — check your connection and API key.','err');
+    addMsg('Network error — check your connection, API key, or whether this provider requires a server proxy for browser use.','err');
   }finally{
     aiBusy=false;
     btn.disabled=false;
