@@ -274,8 +274,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
       <p class="tip" style="margin-bottom:11px">Track traveler quantities and release status for phased flow through the shop.</p>
       <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>WO #</th><th>Qty</th><th>Current Op</th><th>Status</th><th>Done Ops</th><th>Advance</th><th></th></tr></thead>
-<tbody id="woBody"><tr class="empty-row"><td colspan="7">No work orders - click "+ Add WO" to begin</td></tr></tbody></table>
+        <table><thead><tr><th>WO #</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
+<tbody id="woBody"><tr class="empty-row"><td colspan="8">No work orders - click "+ Add WO" to begin</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -849,12 +849,28 @@ function nextRouteOp(current){
   if(idx<0) return route[0];
   return idx>=route.length-1?'COMPLETE':route[idx+1];
 }
+function routeOp(current){
+  return routeOps().find(o=>String(o.num)===String(current||''));
+}
+function opMoveQty(current){
+  const op=routeOp(current);
+  return Math.max(1,parseInt(op?.moveQty)||1);
+}
 function currentOpOptions(cur){
   const route=routeOps();
   let opts='<option value="">—</option>';
   opts+=route.map(o=>`<option value="${o.num}" ${String(cur)===String(o.num)?'selected':''}>OP ${o.num}</option>`).join('');
   opts+=`<option value="COMPLETE" ${cur==='COMPLETE'?'selected':''}>COMPLETE</option>`;
   return opts;
+}
+function cleanOpProgress(progress){
+  if(!progress||typeof progress!=='object'||Array.isArray(progress)) return {};
+  const out={};
+  Object.entries(progress).forEach(([op,qty])=>{
+    const n=Math.max(0,parseInt(qty)||0);
+    if(op) out[String(op)]=n;
+  });
+  return out;
 }
 function normalizeWO(w){
   const wo={
@@ -863,16 +879,34 @@ function normalizeWO(w){
     qty:w.qty||'',
     currentOp:w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp()),
     status:w.status||'Not Started',
-    completedOps:Array.isArray(w.completedOps)?w.completedOps.map(String):[]
+    completedOps:Array.isArray(w.completedOps)?w.completedOps.map(String):[],
+    opProgress:cleanOpProgress(w.opProgress)
   };
   if(wo.status==='Complete') wo.currentOp='COMPLETE';
   if(!wo.currentOp) wo.currentOp=firstRouteOp();
   wo.completedOps=[...new Set(wo.completedOps)];
   return wo;
 }
+function woCurrentDone(w){
+  if(!w.currentOp||w.currentOp==='COMPLETE') return 0;
+  return Math.max(0,parseInt(w.opProgress?.[String(w.currentOp)])||0);
+}
+function woReleaseReady(w){
+  if(!w.currentOp||w.currentOp==='COMPLETE') return false;
+  return woCurrentDone(w)>=opMoveQty(w.currentOp);
+}
 function completedOpsText(w){
   const done=Array.isArray(w.completedOps)?w.completedOps:[];
   return done.length?done.map(x=>'OP '+x).join(' > '):'--';
+}
+function travelerFlowText(w){
+  const cur=w.currentOp==='COMPLETE'?'COMPLETE':(w.currentOp?'OP '+w.currentOp:'No route');
+  const next=nextRouteOp(w.currentOp);
+  const nextText=next==='COMPLETE'?'COMPLETE':(next?'OP '+next:'--');
+  const move=w.currentOp==='COMPLETE'?0:opMoveQty(w.currentOp);
+  const done=woCurrentDone(w);
+  const release=w.currentOp==='COMPLETE'?'Complete':(woReleaseReady(w)?'Next ready':`Needs ${Math.max(0,move-done)} more`);
+  return `Completed: ${completedOpsText(w)}<br>Current: ${cur}<br>Next: ${nextText}<br><span style="color:${woReleaseReady(w)||w.currentOp==='COMPLETE'?'var(--green)':'var(--text-dim)'}">${release}${w.currentOp!=='COMPLETE'?` (${done}/${move})`:''}</span>`;
 }
 function renderWOSummary(){
   const el=document.getElementById('woSummary');
@@ -896,7 +930,7 @@ function renderWOSummary(){
 // WORK ORDERS
 function addWO(){
   woC++;
-  workOrders.push({id:woC,num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started',completedOps:[]});
+  workOrders.push({id:woC,num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});
   renderWOs(); recalc();
 }
 function removeWO(id){ workOrders=workOrders.filter(w=>w.id!==id); renderWOs(); recalc(); }
@@ -911,6 +945,14 @@ function woCh(id,f,v){
   }
   recalc();
 }
+function woProgressCh(id,v){
+  const w=workOrders.find(w=>w.id===id);
+  if(!w||!w.currentOp||w.currentOp==='COMPLETE') return;
+  w.opProgress=cleanOpProgress(w.opProgress);
+  w.opProgress[String(w.currentOp)]=Math.min(Math.max(0,parseInt(v)||0),parseInt(w.qty)||999999);
+  renderWOs();
+  recalc();
+}
 function advanceWO(id){
   const w=workOrders.find(w=>w.id===id);
   if(!w||w.status==='Hold'||w.status==='Complete') return;
@@ -918,6 +960,7 @@ function advanceWO(id){
   if(!route.length) return;
   const current=String(w.currentOp||firstRouteOp());
   const idx=route.findIndex(o=>String(o.num)===current);
+  if(idx>=0&&!woReleaseReady(w)) return;
   const done=new Set(Array.isArray(w.completedOps)?w.completedOps.map(String):[]);
   if(idx>=0) done.add(String(route[idx].num));
   w.completedOps=[...done];
@@ -942,12 +985,15 @@ function renderWOs(){
 
   if(!workOrders.length){
     tb.innerHTML=
-      '<tr class="empty-row"><td colspan="7">No work orders - click "+ Add WO" to begin</td></tr>';
+      '<tr class="empty-row"><td colspan="8">No work orders - click "+ Add WO" to begin</td></tr>';
     return;
   }
 
   tb.innerHTML=workOrders.map(w=>{
     const cur=w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp());
+    const canAdvance=!!cur&&cur!=='COMPLETE'&&w.status!=='Hold'&&w.status!=='Complete'&&woReleaseReady(w);
+    const doneAtOp=woCurrentDone(w);
+    const releaseTitle=cur==='COMPLETE'?'Complete':`Move Qty ${opMoveQty(cur)}`;
 
     return `
       <tr>
@@ -973,6 +1019,20 @@ function renderWOs(){
         </td>
 
         <td>
+          <input type="number"
+                 value="${doneAtOp}"
+                 min="0"
+                 max="${escHtml(w.qty||'')}"
+                 placeholder="0"
+                 title="${releaseTitle}"
+                 onchange="woProgressCh(${w.id},this.value)"
+                 ${cur==='COMPLETE'?'disabled':''}
+                 style="width:78px">
+        </td>
+
+        <td><span class="cv">${travelerFlowText(w)}</span></td>
+
+        <td>
           <select onchange="woCh(${w.id},'status',this.value)">
             <option ${w.status==='Not Started'?'selected':''}>Not Started</option>
             <option ${w.status==='In Process'?'selected':''}>In Process</option>
@@ -981,12 +1041,11 @@ function renderWOs(){
           </select>
         </td>
 
-        <td><span class="cv">${completedOpsText(w)}</span></td>
-
         <td>
           <button class="btn btn-primary btn-sm"
                   onclick="advanceWO(${w.id})"
-                  ${w.status==='Hold'||w.status==='Complete'?'disabled':''}>
+                  title="${canAdvance?'Move to next operation':'Enter enough Done @ Op to meet Move Qty'}"
+                  ${canAdvance?'':'disabled'}>
             ▶
           </button>
         </td>
