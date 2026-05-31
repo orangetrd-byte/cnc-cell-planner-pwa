@@ -275,7 +275,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
       <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
       <div class="tbl-wrap">
         <table><thead><tr><th>WO #</th><th>Qty</th><th>Current Op</th><th>Status</th><th>Done Ops</th><th>Advance</th><th></th></tr></thead>
-<tbody id="woBody"><tr class="empty-row"><td colspan="6">No work orders — click "+ Add WO" to begin</td></tr></tbody></table>
+<tbody id="woBody"><tr class="empty-row"><td colspan="7">No work orders - click "+ Add WO" to begin</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -942,7 +942,7 @@ function renderWOs(){
 
   if(!workOrders.length){
     tb.innerHTML=
-      '<tr class="empty-row"><td colspan="6">No work orders — click "+ Add WO" to begin</td></tr>';
+      '<tr class="empty-row"><td colspan="7">No work orders - click "+ Add WO" to begin</td></tr>';
     return;
   }
 
