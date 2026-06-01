@@ -388,6 +388,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="sline"><span class="sl">Bottleneck Hours</span><span class="sv o" id="sum-bn-hours">—</span></div>
           <div class="sline"><span class="sl">Machine Hours by Machine</span><span class="sv" id="sum-machine-hours">—</span></div>
           <div class="sline"><span class="sl">Operations</span><span class="sv" id="sum-ops">—</span></div>
+          <div class="sline"><span class="sl">Completed Op Steps</span><span class="sv g" id="sum-completed-op-steps">—</span></div>
+          <div class="sline"><span class="sl">Completed by Op</span><span class="sv" id="sum-completed-by-op">—</span></div>
           <div class="sline"><span class="sl">Tool Lines</span><span class="sv" id="sum-tools">—</span></div>
           <div class="sline"><span class="sl">Total to Order</span><span class="sv g" id="sum-order">—</span></div>
         </div>
@@ -966,6 +968,27 @@ function completedOpsText(w){
   const done=Array.isArray(w.completedOps)?w.completedOps:[];
   return done.length?done.map(x=>'OP '+x).join(' > '):'--';
 }
+function completedOperationStats(){
+  const route=routeOps().map(o=>String(o.num));
+  const byOp={};
+  route.forEach(op=>byOp[op]=0);
+  let total=0;
+  workOrders.forEach(raw=>{
+    const w=normalizeWO(raw);
+    const done=new Set(Array.isArray(w.completedOps)?w.completedOps.map(String):[]);
+    if(w.status==='Complete'||w.currentOp==='COMPLETE') route.forEach(op=>done.add(op));
+    done.forEach(op=>{
+      if(!op) return;
+      byOp[op]=(byOp[op]||0)+1;
+      total++;
+    });
+  });
+  const possible=route.length*workOrders.length;
+  const byOpText=route.length
+    ? route.map(op=>`OP ${op}: ${byOp[op]||0}`).join(' · ')
+    : '—';
+  return {total,possible,byOpText};
+}
 function travelerFlowText(w){
   const cur=w.currentOp==='COMPLETE'?'COMPLETE':(w.currentOp?'OP '+w.currentOp:'No route');
   const next=nextRouteOp(w.currentOp);
@@ -1340,6 +1363,7 @@ function updateSummary(){
   const bn=stats.bottleneckOp;
   const machineHours=Object.entries(stats.byMachine).map(([m,h])=>`${m}: ${h.toFixed(1)}h`).join(' · ');
   const woQty=workOrderQty();
+  const completedStats=completedOperationStats();
   let totalOrder=0;
   tools.forEach(t=>{
     const calc=toolOrderCalc(t,tp);
@@ -1362,6 +1386,8 @@ function updateSummary(){
   document.getElementById('sum-bn-hours').textContent=bnHrs;
   document.getElementById('sum-machine-hours').textContent=machineHours||'—';
   document.getElementById('sum-ops').textContent=ops.length;
+  document.getElementById('sum-completed-op-steps').textContent=completedStats.possible?`${completedStats.total}/${completedStats.possible}`:(completedStats.total||'—');
+  document.getElementById('sum-completed-by-op').textContent=completedStats.byOpText;
   document.getElementById('sum-tools').textContent=tools.length;
   document.getElementById('sum-order').textContent=tools.length?totalOrder+' pack(s)':'—';
 }
