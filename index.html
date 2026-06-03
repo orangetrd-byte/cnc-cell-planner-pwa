@@ -125,8 +125,11 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .holiday-row{flex-wrap:wrap}
 .holiday-row .field{min-width:140px}
 .holiday-row .btn{white-space:nowrap}
+.wo-bulk{margin-bottom:12px}
+.wo-bulk-grid{display:grid;grid-template-columns:1.4fr 1fr .75fr .75fr .85fr auto;gap:8px;align-items:end}
 @media(max-width:900px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}.sum-grid{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}.app-nav{top:66px}}
-@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}}
+@media(max-width:1100px){.wo-bulk-grid{grid-template-columns:1fr 1fr 1fr}.wo-bulk-grid .btn{width:100%;justify-content:center}}
+@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}}
 
 .ai-msg{padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.6;max-width:90%;white-space:pre-wrap}
 .ai-msg-bot{background:var(--accent-light);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px}
@@ -290,10 +293,20 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     </div>
     <div class="card-body">
       <p class="tip" style="margin-bottom:11px">Track traveler quantities and release status for phased flow through the shop.</p>
+      <div class="qbox wo-bulk">
+        <div class="wo-bulk-grid">
+          <div class="field"><label>Part / Batch</label><input type="text" id="woBatchName" placeholder="e.g. Part A / Batch 1"></div>
+          <div class="field"><label>WO Prefix</label><input type="text" id="woPrefix" placeholder="A-"></div>
+          <div class="field"><label>Start #</label><input type="number" id="woStartNum" min="1" value="1"></div>
+          <div class="field"><label>Travelers</label><input type="number" id="woBatchCount" min="1" value="1"></div>
+          <div class="field"><label>Qty Each</label><input type="number" id="woQtyEach" min="1" placeholder="10"></div>
+          <button class="btn btn-primary" onclick="createTravelerBatch()">Create Batch</button>
+        </div>
+      </div>
       <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>WO #</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
-<tbody id="woBody"><tr class="empty-row"><td colspan="8">No work orders - click "+ Add WO" to begin</td></tr></tbody></table>
+        <table><thead><tr><th>Batch / Part</th><th>WO #</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
+<tbody id="woBody"><tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -377,6 +390,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="sline"><span class="sl">Deadline</span><span class="sv" id="sum-end">—</span></div>
           <div class="sline"><span class="sl">Working Days</span><span class="sv g" id="sum-days">—</span></div>
           <div class="sline"><span class="sl">Closures</span><span class="sv" id="sum-closures">—</span></div>
+          <div class="sline"><span class="sl">Part Batches</span><span class="sv" id="sum-batches">—</span></div>
           <div class="sline"><span class="sl">Number WOs</span><span class="sv" id="sum-wo-count">—</span></div>
           <div class="sline"><span class="sl">Total WO Quantity</span><span class="sv a" id="sum-wo-qty">—</span></div>
         </div>
@@ -628,6 +642,20 @@ function operationHourStats(parts){
 }
 function workOrderQty(){
   return workOrders.reduce((sum,w)=>sum+(parseInt(w.qty)||0),0);
+}
+function workOrderBatchSummary(){
+  const batches={};
+  workOrders.forEach(raw=>{
+    const w=normalizeWO(raw);
+    const batch=(w.batch||'Unbatched').trim()||'Unbatched';
+    if(!batches[batch]) batches[batch]={count:0,qty:0};
+    batches[batch].count++;
+    batches[batch].qty+=parseInt(w.qty)||0;
+  });
+  return {
+    count:Object.keys(batches).length,
+    text:Object.entries(batches).map(([batch,b])=>`${batch}: ${b.count} traveler(s), ${b.qty} pcs`).join(' · ')
+  };
 }
 
 function nthWeekdayOfMonth(year,month,weekday,n){
@@ -944,6 +972,7 @@ function cleanOpProgress(progress){
 function normalizeWO(w){
   const wo={
     id:w.id,
+    batch:w.batch||'',
     num:w.num||'',
     qty:w.qty||'',
     currentOp:w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp()),
@@ -1007,20 +1036,42 @@ function renderWOSummary(){
   }
   const route=routeOps();
   const counts={Complete:0};
+  const batches={};
   route.forEach(o=>counts['OP '+o.num]=0);
   workOrders.forEach(raw=>{
     const w=normalizeWO(raw);
+    const batch=(w.batch||'Unbatched').trim()||'Unbatched';
+    if(!batches[batch]) batches[batch]={count:0,qty:0};
+    batches[batch].count++;
+    batches[batch].qty+=parseInt(w.qty)||0;
     if(w.status==='Complete'||w.currentOp==='COMPLETE') counts.Complete++;
     else if(w.currentOp) counts['OP '+w.currentOp]=(counts['OP '+w.currentOp]||0)+1;
   });
-  const chips=route.map(o=>`<div class="chip">OP ${o.num}: ${counts['OP '+o.num]||0}</div>`);
+  const chips=Object.entries(batches).map(([batch,b])=>`<div class="chip">${escHtml(batch)}: ${b.count} traveler(s), ${b.qty.toLocaleString()} pcs</div>`);
+  route.forEach(o=>chips.push(`<div class="chip">OP ${o.num}: ${counts['OP '+o.num]||0}</div>`));
   chips.push(`<div class="chip">Complete: ${counts.Complete||0}</div>`);
   el.innerHTML=chips.join('');
 }
 // WORK ORDERS
 function addWO(){
   woC++;
-  workOrders.push({id:woC,num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});
+  workOrders.push({id:woC,batch:'',num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});
+  renderWOs(); recalc();
+}
+function createTravelerBatch(){
+  const batch=(document.getElementById('woBatchName')?.value||document.getElementById('partNum')?.value||'Batch').trim()||'Batch';
+  const prefix=(document.getElementById('woPrefix')?.value||batch.replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'')+'-').trim();
+  const start=Math.max(1,parseInt(document.getElementById('woStartNum')?.value)||1);
+  const count=Math.max(1,parseInt(document.getElementById('woBatchCount')?.value)||1);
+  const qty=parseInt(document.getElementById('woQtyEach')?.value)||0;
+  if(qty<1){ alert('Enter Qty Each before creating the batch.'); return; }
+  const width=Math.max(3,String(start+count-1).length);
+  for(let i=0;i<count;i++){
+    woC++;
+    const n=String(start+i).padStart(width,'0');
+    workOrders.push({id:woC,batch,num:`${prefix}${n}`,qty:String(qty),currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});
+  }
+  document.getElementById('woStartNum').value=String(start+count);
   renderWOs(); recalc();
 }
 function removeWO(id){ workOrders=workOrders.filter(w=>w.id!==id); renderWOs(); recalc(); }
@@ -1075,7 +1126,7 @@ function renderWOs(){
 
   if(!workOrders.length){
     tb.innerHTML=
-      '<tr class="empty-row"><td colspan="8">No work orders - click "+ Add WO" to begin</td></tr>';
+      '<tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr>';
     return;
   }
 
@@ -1087,6 +1138,13 @@ function renderWOs(){
 
     return `
       <tr>
+        <td>
+          <input type="text"
+                 value="${escHtml(w.batch)}"
+                 placeholder="Part / batch"
+                 oninput="woCh(${w.id},'batch',this.value)">
+        </td>
+
         <td>
           <input type="text"
                  value="${escHtml(w.num)}"
@@ -1363,6 +1421,7 @@ function updateSummary(){
   const bn=stats.bottleneckOp;
   const machineHours=Object.entries(stats.byMachine).map(([m,h])=>`${m}: ${h.toFixed(1)}h`).join(' · ');
   const woQty=workOrderQty();
+  const batchSummary=workOrderBatchSummary();
   const completedStats=completedOperationStats();
   let totalOrder=0;
   tools.forEach(t=>{
@@ -1377,6 +1436,7 @@ function updateSummary(){
   document.getElementById('sum-end').textContent=e||'—';
   document.getElementById('sum-days').textContent=wd!==null?wd+' days':'—';
   document.getElementById('sum-closures').textContent=holidays.length+' day(s)';
+  document.getElementById('sum-batches').textContent=batchSummary.count?batchSummary.text:'—';
   document.getElementById('sum-wo-count').textContent=workOrders.length;
   document.getElementById('sum-wo-qty').textContent=workOrders.length?woQty.toLocaleString()+' pcs':'—';
   document.getElementById('sum-pace').textContent=pace;
@@ -1577,8 +1637,9 @@ function getJobContext(){
   }).join('; '):'None defined';
   const woText=workOrders.length?workOrders.map(raw=>{
     const w=normalizeWO(raw);
-    return `${w.num||'unnumbered'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done ${completedOpsText(w)}`;
+    return `${w.num||'unnumbered'} batch ${w.batch||'Unbatched'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done ${completedOpsText(w)}`;
   }).join('; '):'None defined';
+  const batchSummary=workOrderBatchSummary();
   const toolsText=tools.length?tools.map(t=>{
     const calc=toolOrderCalc(t,tp);
     return `${t.desc||'unnamed'} (${t.type}), supply:${calc.inHouse?'in-house':'purchase'}, usage:${calc.u}/part, need:${calc.tn==='—'?0:calc.tn}, order:${calc.inHouse?'do not order':calc.to+' packs'}`;
@@ -1608,6 +1669,7 @@ Cycle Time Needed: ${cyc}
 Total Operation Hours: ${totalHrs}
 Bottleneck Hours: ${bnHrs}
 Work Orders / Travelers: ${woText}
+Traveler Batches: ${batchSummary.text||'None defined'}
 Total WO Quantity: ${workOrderQty()}
 Progress As Of: ${asOf}
 Good Parts Completed: ${done}
