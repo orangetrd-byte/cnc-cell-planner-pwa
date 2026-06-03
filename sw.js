@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v13-batch-status-mobile-wo';
+const CACHE_NAME = 'cnc-cell-planner-v14-ready-queue-polish';
 const APP_SHELL = [
   './',
   './index.html',
