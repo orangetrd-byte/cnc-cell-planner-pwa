@@ -3,7 +3,6 @@ from pathlib import Path
 index = Path('index.html')
 text = index.read_text(encoding='utf-8')
 
-# CSS for the batch creator panel.
 if '.wo-bulk-grid' not in text:
     text = text.replace(
         '.holiday-row .field{min-width:140px}\n.holiday-row .btn{white-space:nowrap}',
@@ -14,7 +13,6 @@ if '.wo-bulk-grid' not in text:
         '@media(max-width:1100px){.wo-bulk-grid{grid-template-columns:1fr 1fr 1fr}.wo-bulk-grid .btn{width:100%;justify-content:center}}\n@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}}'
     )
 
-# Traveler batch creator UI and batch column.
 if 'id="woBatchName"' not in text:
     text = text.replace(
         '      <p class="tip" style="margin-bottom:11px">Track traveler quantities and release status for phased flow through the shop.</p>\n      <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>',
@@ -36,7 +34,6 @@ if 'id="woBatchName"' not in text:
         '<table><thead><tr><th>Batch / Part</th><th>WO #</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>\n<tbody id="woBody"><tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr></tbody></table>'
     )
 
-# Data model and helpers.
 if 'function workOrderBatchSummary()' not in text:
     text = text.replace(
         'function workOrderQty(){\n  return workOrders.reduce((sum,w)=>sum+(parseInt(w.qty)||0),0);\n}\n',
@@ -66,7 +63,6 @@ if 'batch:w.batch' not in text:
         "  const wo={\n    id:w.id,\n    batch:w.batch||'',\n    num:w.num||'',"
     )
 
-# Summary chips by batch.
 if 'const batches={};' not in text[text.find('function renderWOSummary()'):text.find('// WORK ORDERS')]:
     text = text.replace(
         '''  const route=routeOps();
@@ -99,7 +95,6 @@ if 'const batches={};' not in text[text.find('function renderWOSummary()'):text.
   el.innerHTML=chips.join('');'''
     )
 
-# Add batch creation function.
 if 'function createTravelerBatch()' not in text:
     text = text.replace(
         "function addWO(){\n  woC++;\n  workOrders.push({id:woC,num:'',qty:'',currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});\n  renderWOs(); recalc();\n}\n",
@@ -127,15 +122,14 @@ function createTravelerBatch(){
 """
     )
 
-# Table row and empty colspan.
 text = text.replace("'<tr class=\"empty-row\"><td colspan=\"8\">No work orders - click \"+ Add WO\" to begin</td></tr>';", "'<tr class=\"empty-row\"><td colspan=\"9\">No work orders - create a batch or click \"+ Add WO\" to begin</td></tr>';" )
+
 if "woCh(${w.id},'batch',this.value)" not in text:
-    text = text.replace(
-        """      <tr>
+    marker = '''      <tr>
         <td>
-          <input type=\"text\"
-                 value=\"${escHtml(w.num)}\""".replace('\\"','"'),
-        """      <tr>
+          <input type="text"
+                 value="${escHtml(w.num)}"'''
+    replacement = '''      <tr>
         <td>
           <input type="text"
                  value="${escHtml(w.batch)}"
@@ -145,10 +139,9 @@ if "woCh(${w.id},'batch',this.value)" not in text:
 
         <td>
           <input type="text"
-                 value="${escHtml(w.num)}"""
-    )
+                 value="${escHtml(w.num)}"'''
+    text = text.replace(marker, replacement)
 
-# Reports batch line and values.
 if 'id="sum-batches"' not in text:
     text = text.replace(
         '          <div class="sline"><span class="sl">Closures</span><span class="sv" id="sum-closures">—</span></div>',
@@ -159,7 +152,6 @@ if 'const batchSummary=workOrderBatchSummary();' not in text:
 if "sum-batches" in text and "batchSummary.count?batchSummary.text" not in text:
     text = text.replace("  document.getElementById('sum-closures').textContent=holidays.length+' day(s)';\n  document.getElementById('sum-wo-count').textContent=workOrders.length;", "  document.getElementById('sum-closures').textContent=holidays.length+' day(s)';\n  document.getElementById('sum-batches').textContent=batchSummary.count?batchSummary.text:'—';\n  document.getElementById('sum-wo-count').textContent=workOrders.length;")
 
-# Assistant context.
 text = text.replace(
     "return `${w.num||'unnumbered'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done ${completedOpsText(w)}`;",
     "return `${w.num||'unnumbered'} batch ${w.batch||'Unbatched'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done ${completedOpsText(w)}`;"
