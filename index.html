@@ -126,7 +126,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .holiday-row .field{min-width:140px}
 .holiday-row .btn{white-space:nowrap}
 .wo-bulk{margin-bottom:12px}
-.wo-bulk-grid{display:grid;grid-template-columns:1.4fr 1fr .75fr .75fr .85fr auto;gap:8px;align-items:end}
+.wo-bulk-grid{display:grid;grid-template-columns:1.4fr 1fr .65fr .7fr .8fr .9fr auto;gap:8px;align-items:end}
 @media(max-width:900px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}.sum-grid{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}.app-nav{top:66px}}
 @media(max-width:1100px){.wo-bulk-grid{grid-template-columns:1fr 1fr 1fr}.wo-bulk-grid .btn{width:100%;justify-content:center}}
 @media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}}
@@ -300,12 +300,13 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="field"><label>Start #</label><input type="number" id="woStartNum" min="1" value="1"></div>
           <div class="field"><label>Travelers</label><input type="number" id="woBatchCount" min="1" value="1"></div>
           <div class="field"><label>Qty Each</label><input type="number" id="woQtyEach" min="1" placeholder="10"></div>
+          <div class="field"><label>Status</label><select id="woBatchStatus"><option>Not Started</option><option>In Process</option><option>Hold</option><option>Complete</option></select></div>
           <button class="btn btn-primary" onclick="createTravelerBatch()">Create Batch</button>
         </div>
       </div>
       <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>Batch / Part</th><th>WO #</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
+        <table><thead><tr><th>WO #</th><th>Batch / Part</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
 <tbody id="woBody"><tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr></tbody></table>
     </div>
   </div>
@@ -1064,12 +1065,23 @@ function createTravelerBatch(){
   const start=Math.max(1,parseInt(document.getElementById('woStartNum')?.value)||1);
   const count=Math.max(1,parseInt(document.getElementById('woBatchCount')?.value)||1);
   const qty=parseInt(document.getElementById('woQtyEach')?.value)||0;
+  const status=document.getElementById('woBatchStatus')?.value||'Not Started';
   if(qty<1){ alert('Enter Qty Each before creating the batch.'); return; }
   const width=Math.max(3,String(start+count-1).length);
+  const route=routeOps().map(o=>String(o.num));
   for(let i=0;i<count;i++){
     woC++;
     const n=String(start+i).padStart(width,'0');
-    workOrders.push({id:woC,batch,num:`${prefix}${n}`,qty:String(qty),currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});
+    workOrders.push({
+      id:woC,
+      batch,
+      num:`${prefix}${n}`,
+      qty:String(qty),
+      currentOp:status==='Complete'?'COMPLETE':firstRouteOp(),
+      status,
+      completedOps:status==='Complete'?route:[],
+      opProgress:{}
+    });
   }
   document.getElementById('woStartNum').value=String(start+count);
   renderWOs(); recalc();
@@ -1140,16 +1152,16 @@ function renderWOs(){
       <tr>
         <td>
           <input type="text"
-                 value="${escHtml(w.batch)}"
-                 placeholder="Part / batch"
-                 oninput="woCh(${w.id},'batch',this.value)">
+                 value="${escHtml(w.num)}"
+                 placeholder="WO-001"
+                 oninput="woCh(${w.id},'num',this.value)">
         </td>
 
         <td>
           <input type="text"
-                 value="${escHtml(w.num)}"
-                 placeholder="WO-001"
-                 oninput="woCh(${w.id},'num',this.value)">
+                 value="${escHtml(w.batch)}"
+                 placeholder="Part / batch"
+                 oninput="woCh(${w.id},'batch',this.value)">
         </td>
 
         <td>
