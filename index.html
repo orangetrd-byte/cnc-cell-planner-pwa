@@ -109,9 +109,21 @@ tbody tr:hover{background:var(--surface2)}
 tbody td{padding:7px 11px;vertical-align:middle}
 tbody td input,tbody td select{background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--text);font-family:var(--sans);font-size:12px;padding:3px 2px;width:100%;outline:none;-webkit-appearance:none;appearance:none}
 tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
+.stack-table td::before{display:none}
 .op-badge{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-light);padding:2px 8px;border-radius:6px;display:inline-block;white-space:nowrap}
 .cv{color:var(--green);font-weight:600;font-family:var(--mono)}
 .cv-alert{color:var(--red);font-weight:600;font-family:var(--mono)}
+.ready-row{background:var(--green-light)}
+.ready-row:hover{background:#dff0e3}
+.hold-row{background:var(--yellow-light)}
+.release-panel{display:none;margin-bottom:11px;background:var(--green-light);border:1px solid rgba(40,167,69,.24);border-radius:var(--radius-sm);padding:11px}
+.release-panel.show{display:block}
+.release-title{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.release-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.release-card{background:#fff;border:1px solid rgba(40,167,69,.22);border-radius:var(--radius-sm);padding:9px 10px;font-size:12px;line-height:1.45}
+.release-card b{font-family:var(--mono);color:var(--text)}
+.release-meta{display:block;color:var(--text-dim);font-size:11px;margin-top:2px}
+.ready-pill{display:inline-block;background:var(--green);color:#fff;border-radius:6px;padding:2px 7px;font-family:var(--mono);font-size:10px;font-weight:600;white-space:nowrap}
 .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .sum-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px}
 .sum-block h4{font-size:10px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--border)}
@@ -126,10 +138,12 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .holiday-row .field{min-width:140px}
 .holiday-row .btn{white-space:nowrap}
 .wo-bulk{margin-bottom:12px}
-.wo-bulk-grid{display:grid;grid-template-columns:1.4fr 1fr .75fr .75fr .85fr auto;gap:8px;align-items:end}
+.wo-bulk-grid{display:grid;grid-template-columns:1.4fr 1fr .65fr .7fr .8fr .9fr auto;gap:8px;align-items:end}
 @media(max-width:900px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}.sum-grid{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}.app-nav{top:66px}}
+@media(min-width:701px) and (max-width:1100px){.stack-table th:first-child,.stack-table td:first-child{position:sticky;left:0;background:var(--surface);z-index:2}.stack-table thead th:first-child{background:var(--surface2);z-index:3}.stack-table th:nth-child(2),.stack-table td:nth-child(2){position:sticky;left:76px;background:var(--surface);z-index:2}.stack-table thead th:nth-child(2){background:var(--surface2);z-index:3}}
 @media(max-width:1100px){.wo-bulk-grid{grid-template-columns:1fr 1fr 1fr}.wo-bulk-grid .btn{width:100%;justify-content:center}}
-@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}}
+@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}.release-list{grid-template-columns:1fr}}
+@media(max-width:700px){.tbl-wrap{overflow:visible;border:none}.stack-table{border-collapse:separate;border-spacing:0 10px}.stack-table thead{display:none}.stack-table tbody,.stack-table tr,.stack-table td{display:block;width:100%}.stack-table tbody tr{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:9px 10px;margin-bottom:10px}.stack-table tbody tr.ready-row{background:var(--green-light);border-color:rgba(40,167,69,.25)}.stack-table tbody tr.hold-row{background:var(--yellow-light);border-color:rgba(245,158,11,.28)}.stack-table tbody tr.empty-row{box-shadow:none;padding:0}.stack-table tbody tr.empty-row td{display:block;text-align:center}.stack-table tbody td{display:grid;grid-template-columns:94px minmax(0,1fr);gap:9px;align-items:center;border-bottom:1px solid rgba(0,0,0,.05);padding:8px 2px}.stack-table tbody td:last-child{border-bottom:none}.stack-table td::before{content:attr(data-label);display:block;color:var(--text-dim);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.stack-table td input,.stack-table td select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 9px}.stack-table td .cv{font-size:11px;line-height:1.55}.stack-table td .btn{width:100%;justify-content:center}}
 
 .ai-msg{padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.6;max-width:90%;white-space:pre-wrap}
 .ai-msg-bot{background:var(--accent-light);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px}
@@ -300,12 +314,14 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="field"><label>Start #</label><input type="number" id="woStartNum" min="1" value="1"></div>
           <div class="field"><label>Travelers</label><input type="number" id="woBatchCount" min="1" value="1"></div>
           <div class="field"><label>Qty Each</label><input type="number" id="woQtyEach" min="1" placeholder="10"></div>
+          <div class="field"><label>Status</label><select id="woBatchStatus"><option>Not Started</option><option>In Process</option><option>Hold</option><option>Complete</option></select></div>
           <button class="btn btn-primary" onclick="createTravelerBatch()">Create Batch</button>
         </div>
       </div>
+      <div class="release-panel" id="readyQueue"></div>
       <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>Batch / Part</th><th>WO #</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
+        <table class="stack-table"><thead><tr><th>WO #</th><th>Batch / Part</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
 <tbody id="woBody"><tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr></tbody></table>
     </div>
   </div>
@@ -349,8 +365,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     <div class="card-body">
       <p class="tip" style="margin-bottom:11px">Operation numbers start at 10 and step by 10. Enter cycle time per part per operation.</p>
       <div class="tbl-wrap">
-        <table><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Move Qty</th><th>Type</th><th></th></tr></thead>
-        <tbody id="opBody"><tr class="empty-row"><td colspan="10">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
+        <table class="stack-table"><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Move Qty</th><th>Shifts</th><th>Type</th><th></th></tr></thead>
+        <tbody id="opBody"><tr class="empty-row"><td colspan="11">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
       </div>
     </div>
   </div>
@@ -401,6 +417,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="sline"><span class="sl">Total Operation Hours</span><span class="sv" id="sum-total-hours">—</span></div>
           <div class="sline"><span class="sl">Bottleneck Hours</span><span class="sv o" id="sum-bn-hours">—</span></div>
           <div class="sline"><span class="sl">Machine Hours by Machine</span><span class="sv" id="sum-machine-hours">—</span></div>
+          <div class="sline"><span class="sl">Shift Coverage by Op</span><span class="sv" id="sum-shift-coverage">—</span></div>
+          <div class="sline"><span class="sl">Bottleneck Calendar Load</span><span class="sv o" id="sum-bn-days">—</span></div>
           <div class="sline"><span class="sl">Operations</span><span class="sv" id="sum-ops">—</span></div>
           <div class="sline"><span class="sl">Completed Op Steps</span><span class="sv g" id="sum-completed-op-steps">—</span></div>
           <div class="sline"><span class="sl">Completed by Op</span><span class="sv" id="sum-completed-by-op">—</span></div>
@@ -602,6 +620,13 @@ function netShiftMinutes(){
 function shiftsPerDay(){
   return Math.max(1,parseInt(document.getElementById('shiftsPerDay').value)||1);
 }
+function opShiftCount(o){
+  return Math.max(1,Math.min(2,parseInt(o?.shiftCount)||1));
+}
+function opShiftLabel(o){
+  const count=opShiftCount(o);
+  return count===2?'2 shifts':'1 shift';
+}
 function opCycleMin(o){
   return (parseFloat(o.cycle)||0)*(o.cycleUnit==='hr'?60:1);
 }
@@ -613,32 +638,45 @@ function opCapacity(o,parts=1,includeSetup=true,availability=1){
   if(cycle<=0||net<=0) return null;
   const totalMin=setup+(Math.max(0,parts)*cycle);
   const shifts=Math.ceil(totalMin/net);
+  const shiftCount=opShiftCount(o);
+  const days=totalMin/(net*shiftCount);
+  const calendarDays=Math.ceil(days);
   const firstShiftParts=Math.max(0,Math.floor((net-setup)/cycle));
   const normalShiftParts=Math.max(0,Math.floor(net/cycle));
-  return {op:o,cycle,setup,totalMin,shifts,firstShiftParts,normalShiftParts,setupPlusFirst:setup+cycle,fitsFirstPart:setup+cycle<=net};
+  return {op:o,cycle,setup,totalMin,shifts,shiftCount,days,calendarDays,firstShiftParts,normalShiftParts,setupPlusFirst:setup+cycle,fitsFirstPart:setup+cycle<=net};
 }
 function jobCapacity(parts,includeSetup=true,availability=1){
   const caps=ops.map(o=>opCapacity(o,parts,includeSetup,availability)).filter(Boolean);
   if(!caps.length) return null;
-  const bottleneck=caps.reduce((slow,c)=>!slow||c.shifts>slow.shifts||c.totalMin>slow.totalMin?c:slow,null);
+  const bottleneck=caps.reduce((slow,c)=>!slow||c.days>slow.days||c.totalMin>slow.totalMin?c:slow,null);
   const maxShifts=Math.max(...caps.map(c=>c.shifts));
+  const maxDays=Math.max(...caps.map(c=>c.days));
+  const maxCalendarDays=Math.max(...caps.map(c=>c.calendarDays));
   const maxHours=Math.max(...caps.map(c=>c.totalMin/60));
-  return {caps,bottleneck,maxShifts,maxHours};
+  return {caps,bottleneck,maxShifts,maxDays,maxCalendarDays,maxHours};
 }
 function operationHourStats(parts){
   const qty=Math.max(0,parts||0);
   const byMachine={};
-  let total=0,bottleneck=0,bottleneckOp=null;
+  const shiftLoad=[];
+  let total=0,bottleneck=0,bottleneckOp=null,bottleneckDays=0,bottleneckDayOp=null;
   ops.forEach(o=>{
     const cycle=opCycleMin(o), setup=opSetupMin(o);
     if(cycle<=0&&setup<=0) return;
     const hrs=(setup+(qty*cycle))/60;
+    const shiftCount=opShiftCount(o);
+    const days=netShiftMinutes()>0?hrs/(netShiftMinutes()/60)/shiftCount:0;
     total+=hrs;
     const machine=(o.machine||'Unassigned').trim()||'Unassigned';
     byMachine[machine]=(byMachine[machine]||0)+hrs;
     if(hrs>bottleneck){ bottleneck=hrs; bottleneckOp=o; }
+    if(days>bottleneckDays){ bottleneckDays=days; bottleneckDayOp=o; }
+    shiftLoad.push({op:o,hrs,shiftCount,days});
   });
-  return {total,bottleneck,bottleneckOp,byMachine};
+  const shiftCoverageText=shiftLoad.length
+    ? shiftLoad.map(x=>`OP ${x.op.num}: ${opShiftLabel(x.op)}, ${x.days.toFixed(1)} day(s)`).join(' · ')
+    : '—';
+  return {total,bottleneck,bottleneckOp,bottleneckDays,bottleneckDayOp,byMachine,shiftLoad,shiftCoverageText};
 }
 function workOrderQty(){
   return workOrders.reduce((sum,w)=>sum+(parseInt(w.qty)||0),0);
@@ -993,6 +1031,10 @@ function woReleaseReady(w){
   if(!w.currentOp||w.currentOp==='COMPLETE') return false;
   return woCurrentDone(w)>=opMoveQty(w.currentOp);
 }
+function woCanAdvance(w){
+  const cur=w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp());
+  return !!cur&&cur!=='COMPLETE'&&w.status!=='Hold'&&w.status!=='Complete'&&woReleaseReady(w);
+}
 function completedOpsText(w){
   const done=Array.isArray(w.completedOps)?w.completedOps:[];
   return done.length?done.map(x=>'OP '+x).join(' > '):'--';
@@ -1024,8 +1066,27 @@ function travelerFlowText(w){
   const nextText=next==='COMPLETE'?'COMPLETE':(next?'OP '+next:'--');
   const move=w.currentOp==='COMPLETE'?0:opMoveQty(w.currentOp);
   const done=woCurrentDone(w);
-  const release=w.currentOp==='COMPLETE'?'Complete':(woReleaseReady(w)?'Next ready':`Needs ${Math.max(0,move-done)} more`);
-  return `Completed: ${completedOpsText(w)}<br>Current: ${cur}<br>Next: ${nextText}<br><span style="color:${woReleaseReady(w)||w.currentOp==='COMPLETE'?'var(--green)':'var(--text-dim)'}">${release}${w.currentOp!=='COMPLETE'?` (${done}/${move})`:''}</span>`;
+  const release=w.currentOp==='COMPLETE'?'Complete':(woCanAdvance(w)?'<span class="ready-pill">Ready</span>':`Needs ${Math.max(0,move-done)} more`);
+  return `Completed: ${completedOpsText(w)}<br>Current: ${cur}<br>Next: ${nextText}<br><span style="color:${woCanAdvance(w)||w.currentOp==='COMPLETE'?'var(--green)':'var(--text-dim)'}">${release}${w.currentOp!=='COMPLETE'?` (${done}/${move})`:''}</span>`;
+}
+function renderReadyQueue(){
+  const el=document.getElementById('readyQueue');
+  if(!el) return;
+  const ready=workOrders.map(normalizeWO).filter(woCanAdvance);
+  if(!ready.length){
+    el.classList.remove('show');
+    el.innerHTML='';
+    return;
+  }
+  const cards=ready.map(w=>{
+    const next=nextRouteOp(w.currentOp);
+    const nextText=next==='COMPLETE'?'COMPLETE':`OP ${next}`;
+    const op=ops.find(o=>String(o.num)===String(w.currentOp));
+    const machine=(op?.machine||'Unassigned').trim()||'Unassigned';
+    return `<div class="release-card"><b>${escHtml(w.num||'WO')}</b> ${escHtml(w.batch||'Unbatched')}<span class="release-meta">OP ${escHtml(w.currentOp)} ready for ${escHtml(nextText)} &middot; ${escHtml(machine)}</span></div>`;
+  }).join('');
+  el.innerHTML=`<div class="release-title">${ready.length} ready for next operation</div><div class="release-list">${cards}</div>`;
+  el.classList.add('show');
 }
 function renderWOSummary(){
   const el=document.getElementById('woSummary');
@@ -1049,6 +1110,7 @@ function renderWOSummary(){
   });
   const chips=Object.entries(batches).map(([batch,b])=>`<div class="chip">${escHtml(batch)}: ${b.count} traveler(s), ${b.qty.toLocaleString()} pcs</div>`);
   route.forEach(o=>chips.push(`<div class="chip">OP ${o.num}: ${counts['OP '+o.num]||0}</div>`));
+  chips.push(`<div class="chip">Ready: ${workOrders.map(normalizeWO).filter(woCanAdvance).length}</div>`);
   chips.push(`<div class="chip">Complete: ${counts.Complete||0}</div>`);
   el.innerHTML=chips.join('');
 }
@@ -1064,12 +1126,23 @@ function createTravelerBatch(){
   const start=Math.max(1,parseInt(document.getElementById('woStartNum')?.value)||1);
   const count=Math.max(1,parseInt(document.getElementById('woBatchCount')?.value)||1);
   const qty=parseInt(document.getElementById('woQtyEach')?.value)||0;
+  const status=document.getElementById('woBatchStatus')?.value||'Not Started';
   if(qty<1){ alert('Enter Qty Each before creating the batch.'); return; }
   const width=Math.max(3,String(start+count-1).length);
+  const route=routeOps().map(o=>String(o.num));
   for(let i=0;i<count;i++){
     woC++;
     const n=String(start+i).padStart(width,'0');
-    workOrders.push({id:woC,batch,num:`${prefix}${n}`,qty:String(qty),currentOp:firstRouteOp(),status:'Not Started',completedOps:[],opProgress:{}});
+    workOrders.push({
+      id:woC,
+      batch,
+      num:`${prefix}${n}`,
+      qty:String(qty),
+      currentOp:status==='Complete'?'COMPLETE':firstRouteOp(),
+      status,
+      completedOps:status==='Complete'?route:[],
+      opProgress:{}
+    });
   }
   document.getElementById('woStartNum').value=String(start+count);
   renderWOs(); recalc();
@@ -1122,6 +1195,7 @@ function renderWOs(){
   const tb=document.getElementById('woBody');
   if(!tb) return;
   workOrders=workOrders.map(normalizeWO);
+  renderReadyQueue();
   renderWOSummary();
 
   if(!workOrders.length){
@@ -1132,27 +1206,28 @@ function renderWOs(){
 
   tb.innerHTML=workOrders.map(w=>{
     const cur=w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp());
-    const canAdvance=!!cur&&cur!=='COMPLETE'&&w.status!=='Hold'&&w.status!=='Complete'&&woReleaseReady(w);
+    const canAdvance=woCanAdvance(w);
     const doneAtOp=woCurrentDone(w);
     const releaseTitle=cur==='COMPLETE'?'Complete':`Move Qty ${opMoveQty(cur)}`;
+    const rowClass=canAdvance?' class="ready-row"':(w.status==='Hold'?' class="hold-row"':'');
 
     return `
-      <tr>
-        <td>
-          <input type="text"
-                 value="${escHtml(w.batch)}"
-                 placeholder="Part / batch"
-                 oninput="woCh(${w.id},'batch',this.value)">
-        </td>
-
-        <td>
+      <tr${rowClass}>
+        <td data-label="WO #">
           <input type="text"
                  value="${escHtml(w.num)}"
                  placeholder="WO-001"
                  oninput="woCh(${w.id},'num',this.value)">
         </td>
 
-        <td>
+        <td data-label="Batch / Part">
+          <input type="text"
+                 value="${escHtml(w.batch)}"
+                 placeholder="Part / batch"
+                 oninput="woCh(${w.id},'batch',this.value)">
+        </td>
+
+        <td data-label="Qty">
           <input type="number"
                  value="${escHtml(w.qty)}"
                  min="0"
@@ -1160,13 +1235,13 @@ function renderWOs(){
                  oninput="woCh(${w.id},'qty',this.value)">
         </td>
 
-        <td>
+        <td data-label="Current Op">
           <select onchange="woCh(${w.id},'currentOp',this.value)">
             ${currentOpOptions(cur)}
           </select>
         </td>
 
-        <td>
+        <td data-label="Done @ Op">
           <input type="number"
                  value="${doneAtOp}"
                  min="0"
@@ -1178,9 +1253,9 @@ function renderWOs(){
                  style="width:78px">
         </td>
 
-        <td><span class="cv">${travelerFlowText(w)}</span></td>
+        <td data-label="Flow"><span class="cv">${travelerFlowText(w)}</span></td>
 
-        <td>
+        <td data-label="Status">
           <select onchange="woCh(${w.id},'status',this.value)">
             <option ${w.status==='Not Started'?'selected':''}>Not Started</option>
             <option ${w.status==='In Process'?'selected':''}>In Process</option>
@@ -1189,7 +1264,7 @@ function renderWOs(){
           </select>
         </td>
 
-        <td>
+        <td data-label="Advance">
           <button class="btn btn-primary btn-sm"
                   onclick="advanceWO(${w.id})"
                   title="${canAdvance?'Move to next operation':'Enter enough Done @ Op to meet Move Qty'}"
@@ -1198,7 +1273,7 @@ function renderWOs(){
           </button>
         </td>
 
-        <td>
+        <td data-label="Remove">
           <button class="btn btn-red btn-sm"
                   onclick="removeWO(${w.id})">
             ✕
@@ -1213,7 +1288,7 @@ function addOp(){
   opC++;
   const nums=ops.map(o=>parseFloat(o.num)).filter(Number.isFinite);
   const num=nums.length?Math.max(...nums)+10:10;
-  ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',moveQty:1,type:'sequential'});
+  ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',moveQty:1,shiftCount:1,type:'sequential'});
   renderOps(); renderWOs(); recalc();
 }
 function removeOp(id){ ops=ops.filter(o=>o.id!==id); renderOps(); renderWOs(); recalc(); }
@@ -1221,18 +1296,19 @@ function opCh(id,f,v){ const o=ops.find(o=>o.id===id); if(o) o[f]=v; recalc(); r
 function clearOps(){ if(!confirm('Clear all operations?')) return; ops=[]; opC=0; renderOps(); renderWOs(); recalc(); }
 function renderOps(){
   const tb=document.getElementById('opBody');
-  if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="10">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
+  if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="11">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
   tb.innerHTML=ops.map(o=>`<tr>
-    <td><span class="op-badge">OP ${o.num}</span></td>
-    <td><input type="text" value="${escHtml(o.desc)}" placeholder="e.g. Turn OD" oninput="opCh(${o.id},'desc',this.value)"></td>
-    <td><input type="text" value="${escHtml(o.machine)}" placeholder="Lathe #1" oninput="opCh(${o.id},'machine',this.value)"></td>
-    <td><input type="number" value="${escHtml(o.cycle)}" placeholder="0.00" min="0" step="0.01" oninput="opCh(${o.id},'cycle',this.value)" style="width:70px"></td>
-    <td><select onchange="opCh(${o.id},'cycleUnit',this.value)" style="width:55px"><option value="min" ${(o.cycleUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.cycleUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
-    <td><input type="number" value="${escHtml(o.setup)}" placeholder="0" min="0" step="0.01" oninput="opCh(${o.id},'setup',this.value)" style="width:70px"></td>
-    <td><select onchange="opCh(${o.id},'setupUnit',this.value)" style="width:55px"><option value="min" ${(o.setupUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.setupUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
-    <td><input type="number" value="${escHtml(o.moveQty||1)}" min="1" step="1" oninput="opCh(${o.id},'moveQty',this.value)" style="width:70px"></td>
-    <td><select onchange="opCh(${o.id},'type',this.value)"><option value="sequential" ${o.type==='sequential'?'selected':''}>Sequential</option><option value="parallel" ${o.type==='parallel'?'selected':''}>Parallel</option></select></td>
-    <td><button class="btn btn-red btn-sm" onclick="removeOp(${o.id})">✕</button></td>
+    <td data-label="Op #"><span class="op-badge">OP ${o.num}</span></td>
+    <td data-label="Description"><input type="text" value="${escHtml(o.desc)}" placeholder="e.g. Turn OD" oninput="opCh(${o.id},'desc',this.value)"></td>
+    <td data-label="Machine"><input type="text" value="${escHtml(o.machine)}" placeholder="Lathe #1" oninput="opCh(${o.id},'machine',this.value)"></td>
+    <td data-label="Cycle Time"><input type="number" value="${escHtml(o.cycle)}" placeholder="0.00" min="0" step="0.01" oninput="opCh(${o.id},'cycle',this.value)" style="width:70px"></td>
+    <td data-label="Cycle Unit"><select onchange="opCh(${o.id},'cycleUnit',this.value)" style="width:55px"><option value="min" ${(o.cycleUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.cycleUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
+    <td data-label="Setup Time"><input type="number" value="${escHtml(o.setup)}" placeholder="0" min="0" step="0.01" oninput="opCh(${o.id},'setup',this.value)" style="width:70px"></td>
+    <td data-label="Setup Unit"><select onchange="opCh(${o.id},'setupUnit',this.value)" style="width:55px"><option value="min" ${(o.setupUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.setupUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
+    <td data-label="Move Qty"><input type="number" value="${escHtml(o.moveQty||1)}" min="1" step="1" oninput="opCh(${o.id},'moveQty',this.value)" style="width:70px"></td>
+    <td data-label="Shifts"><select onchange="opCh(${o.id},'shiftCount',this.value)" style="width:82px"><option value="1" ${opShiftCount(o)===1?'selected':''}>1 shift</option><option value="2" ${opShiftCount(o)===2?'selected':''}>2 shifts</option></select></td>
+    <td data-label="Type"><select onchange="opCh(${o.id},'type',this.value)"><option value="sequential" ${o.type==='sequential'?'selected':''}>Sequential</option><option value="parallel" ${o.type==='parallel'?'selected':''}>Parallel</option></select></td>
+    <td data-label="Remove"><button class="btn btn-red btn-sm" onclick="removeOp(${o.id})">✕</button></td>
   </tr>`).join('');
   renderToolOpDDs();
 }
@@ -1370,7 +1446,7 @@ function updateProgressReality(){
     fitWarnings=plan.caps.filter(c=>!c.fitsFirstPart).map(c=>`OP ${c.op.num} setup + first part needs ${formatCycleTime(c.setupPlusFirst)}, longer than one net shift.`);
   }
   const finishShifts=actualMin>0&&cap>0&&remaining>0?Math.ceil(remaining/cap):(plan?plan.maxShifts:0);
-  const finishDays=finishShifts?Math.ceil(finishShifts/shiftsPerDay()):0;
+  const finishDays=actualMin>0&&finishShifts?Math.ceil(finishShifts/shiftsPerDay()):(plan?plan.maxCalendarDays:0);
   const finish=finishDays?addWorkDays(asOf,finishDays,dpw,hset):null;
   const finishIso=finish?iso(finish):'';
   const projectedLate=!!(finishIso&&e&&finishIso>e);
@@ -1419,6 +1495,7 @@ function updateSummary(){
   }
   const stats=operationHourStats(tp);
   const bn=stats.bottleneckOp;
+  const bnDayOp=stats.bottleneckDayOp;
   const machineHours=Object.entries(stats.byMachine).map(([m,h])=>`${m}: ${h.toFixed(1)}h`).join(' · ');
   const woQty=workOrderQty();
   const batchSummary=workOrderBatchSummary();
@@ -1445,6 +1522,8 @@ function updateSummary(){
   document.getElementById('sum-total-hours').textContent=totalHrs;
   document.getElementById('sum-bn-hours').textContent=bnHrs;
   document.getElementById('sum-machine-hours').textContent=machineHours||'—';
+  document.getElementById('sum-shift-coverage').textContent=stats.shiftCoverageText||'—';
+  document.getElementById('sum-bn-days').textContent=bnDayOp?`OP ${bnDayOp.num}: ${stats.bottleneckDays.toFixed(1)} working day(s) @ ${opShiftLabel(bnDayOp)}`:'—';
   document.getElementById('sum-ops').textContent=ops.length;
   document.getElementById('sum-completed-op-steps').textContent=completedStats.possible?`${completedStats.total}/${completedStats.possible}`:(completedStats.total||'—');
   document.getElementById('sum-completed-by-op').textContent=completedStats.byOpText;
@@ -1480,7 +1559,8 @@ function runQuery(){
   let bnStr='';
   if(plan&&plan.bottleneck){
     const b=plan.bottleneck;
-    const maxParts=(Math.max(0,b.firstShiftParts)+(Math.max(0,queryShifts-1)*b.normalShiftParts));
+    const opWindowShifts=wd*b.shiftCount;
+    const maxParts=(Math.max(0,b.firstShiftParts)+(Math.max(0,opWindowShifts-1)*b.normalShiftParts));
     bnStr=maxParts<qp
       ? `<br><span style="color:var(--red)">⚠ WARNING: OP ${b.op.num} setup-aware capacity limits output to ${maxParts.toLocaleString()} parts — ${(qp-maxParts).toLocaleString()} short.</span>`
       : `<br><span style="color:var(--green)">✓ Achievable: setup-aware bottleneck allows up to ${maxParts.toLocaleString()} parts in this window.</span>`;
@@ -1495,7 +1575,7 @@ function runQuery(){
     Parts to run: <b>${qp.toLocaleString()}</b><br>
     Required pace: <b>${pace.toFixed(2)} parts/shift</b><br>
     Cycle time needed: <b>${formatCycleTime(cyc)}/part</b><br>
-    Total machine time: <b>${totalHrs.toFixed(1)} hrs</b> &nbsp;(${plan?plan.maxShifts.toFixed(1):(totalHrs/(netShiftMinutes()/60)).toFixed(1)} net shift(s) @ ${(netShiftMinutes()/60).toFixed(2)}hr net/shift)
+    Total machine time: <b>${totalHrs.toFixed(1)} hrs</b> &nbsp;(${plan?plan.maxDays.toFixed(1):(totalHrs/(netShiftMinutes()/60)/shiftsPerDay()).toFixed(1)} working day(s) at assigned operation shifts)
     ${bnStr}`;
 }
 
@@ -1633,7 +1713,7 @@ function getJobContext(){
   }
   const opsText=ops.length?ops.map(o=>{
     const cap=opCapacity(o,tp,true,1);
-    return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, one-time setup=${o.setup||0} ${o.setupUnit||'min'}, move qty=${o.moveQty||1}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
+    return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, one-time setup=${o.setup||0} ${o.setupUnit||'min'}, move qty=${o.moveQty||1}, shift coverage=${opShiftLabel(o)}, calendar load=${cap?cap.days.toFixed(1)+' working days':'unknown'}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
   }).join('; '):'None defined';
   const woText=workOrders.length?workOrders.map(raw=>{
     const w=normalizeWO(raw);
