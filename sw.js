@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v14-ready-queue-polish';
+const CACHE_NAME = 'cnc-cell-planner-v15-operation-shifts';
 const APP_SHELL = [
   './',
   './index.html',
