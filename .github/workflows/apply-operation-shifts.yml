@@ -1,0 +1,25 @@
+name: Apply operation shifts
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-operation-shifts.yml'
+      - '.github/scripts/apply_operation_shifts.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python .github/scripts/apply_operation_shifts.py
+      - name: Commit updated app shell
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html sw.js .github/workflows/apply-operation-shifts.yml .github/scripts/apply_operation_shifts.py
+          git commit -m "Add operation-level shift coverage"
+          git push
