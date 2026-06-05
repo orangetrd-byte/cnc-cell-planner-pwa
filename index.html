@@ -139,10 +139,12 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .holiday-row .btn{white-space:nowrap}
 .wo-bulk{margin-bottom:12px}
 .wo-bulk-grid{display:grid;grid-template-columns:1.4fr 1fr .65fr .7fr .8fr .9fr auto;gap:8px;align-items:end}
+.wo-search{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:8px;align-items:end;margin-bottom:10px}
+.wo-count{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:8px}
 @media(max-width:900px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}.sum-grid{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}.app-nav{top:66px}.sline{grid-template-columns:minmax(118px,.42fr) minmax(0,1fr)}}
 @media(min-width:701px) and (max-width:1100px){.stack-table th:first-child,.stack-table td:first-child{position:sticky;left:0;background:var(--surface);z-index:2}.stack-table thead th:first-child{background:var(--surface2);z-index:3}.stack-table th:nth-child(2),.stack-table td:nth-child(2){position:sticky;left:76px;background:var(--surface);z-index:2}.stack-table thead th:nth-child(2){background:var(--surface2);z-index:3}}
 @media(max-width:1100px){.wo-bulk-grid{grid-template-columns:1fr 1fr 1fr}.wo-bulk-grid .btn{width:100%;justify-content:center}}
-@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}.release-list{grid-template-columns:1fr}}
+@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}.wo-search{grid-template-columns:1fr}.release-list{grid-template-columns:1fr}}
 @media(max-width:700px){.tbl-wrap{overflow:visible;border:none}.stack-table{border-collapse:separate;border-spacing:0 10px}.stack-table thead{display:none}.stack-table tbody,.stack-table tr,.stack-table td{display:block;width:100%}.stack-table tbody tr{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:9px 10px;margin-bottom:10px}.stack-table tbody tr.ready-row{background:var(--green-light);border-color:rgba(40,167,69,.25)}.stack-table tbody tr.hold-row{background:var(--yellow-light);border-color:rgba(245,158,11,.28)}.stack-table tbody tr.empty-row{box-shadow:none;padding:0}.stack-table tbody tr.empty-row td{display:block;text-align:center}.stack-table tbody td{display:grid;grid-template-columns:94px minmax(0,1fr);gap:9px;align-items:center;border-bottom:1px solid rgba(0,0,0,.05);padding:8px 2px}.stack-table tbody td:last-child{border-bottom:none}.stack-table td::before{content:attr(data-label);display:block;color:var(--text-dim);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.stack-table td input,.stack-table td select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 9px}.stack-table td .cv{font-size:11px;line-height:1.55}.stack-table td .btn{width:100%;justify-content:center}}
 @media(max-width:520px){.sline{grid-template-columns:1fr;gap:2px}.sv{text-align:left}}
 
@@ -321,6 +323,11 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
       </div>
       <div class="release-panel" id="readyQueue"></div>
       <div class="hchips" id="woSummary" style="margin-bottom:11px"></div>
+      <div class="wo-search">
+        <div class="field" style="margin:0"><label>Search WO / Batch</label><input type="search" id="woSearch" placeholder="WO number or batch" oninput="setWOSearch(this.value)"></div>
+        <button class="btn btn-ghost btn-sm" onclick="clearWOSearch()">Clear Search</button>
+      </div>
+      <div class="wo-count" id="woSearchCount"></div>
       <div class="tbl-wrap">
         <table class="stack-table"><thead><tr><th>WO #</th><th>Batch / Part</th><th>Qty</th><th>Current Op</th><th>Done @ Op</th><th>Flow</th><th>Status</th><th>Advance</th><th></th></tr></thead>
 <tbody id="woBody"><tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr></tbody></table>
@@ -493,6 +500,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 <script>
 // STATE
 let ops=[], tools=[], holidays=[], workOrders=[];
+let woSearch='';
 let opC=0, toolC=0, woC=0;
 let aiBusy=false;
 let aiLastAskAt=0;
@@ -1191,6 +1199,21 @@ function clearWOs(){
   renderWOs();
   recalc();
 }
+function setWOSearch(v){
+  woSearch=(v||'').trim().toLowerCase();
+  renderWOs();
+}
+function clearWOSearch(){
+  woSearch='';
+  const el=document.getElementById('woSearch');
+  if(el) el.value='';
+  renderWOs();
+}
+function woMatchesSearch(w){
+  if(!woSearch) return true;
+  return [w.num,w.batch,w.status,w.currentOp&&`OP ${w.currentOp}`]
+    .some(v=>String(v||'').toLowerCase().includes(woSearch));
+}
 
 function renderWOs(){
   const tb=document.getElementById('woBody');
@@ -1198,14 +1221,23 @@ function renderWOs(){
   workOrders=workOrders.map(normalizeWO);
   renderReadyQueue();
   renderWOSummary();
+  const countEl=document.getElementById('woSearchCount');
 
   if(!workOrders.length){
+    if(countEl) countEl.textContent='';
     tb.innerHTML=
       '<tr class="empty-row"><td colspan="9">No work orders - create a batch or click "+ Add WO" to begin</td></tr>';
     return;
   }
 
-  tb.innerHTML=workOrders.map(w=>{
+  const visible=workOrders.filter(woMatchesSearch);
+  if(countEl) countEl.textContent=woSearch?`Showing ${visible.length} of ${workOrders.length} travelers`:`${workOrders.length} traveler(s)`;
+  if(!visible.length){
+    tb.innerHTML='<tr class="empty-row"><td colspan="9">No travelers match this search.</td></tr>';
+    return;
+  }
+
+  tb.innerHTML=visible.map(w=>{
     const cur=w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp());
     const canAdvance=woCanAdvance(w);
     const doneAtOp=woCurrentDone(w);
