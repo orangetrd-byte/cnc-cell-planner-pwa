@@ -373,8 +373,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     <div class="card-body">
       <p class="tip" style="margin-bottom:11px">Operation numbers start at 10 and step by 10. Enter cycle time per part per operation.</p>
       <div class="tbl-wrap">
-        <table class="stack-table"><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Move Qty</th><th>Shifts</th><th>Type</th><th></th></tr></thead>
-        <tbody id="opBody"><tr class="empty-row"><td colspan="11">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
+        <table class="stack-table"><thead><tr><th>Op #</th><th>Description</th><th>Machine / Station</th><th>Cycle Time</th><th>Unit</th><th>Setup Time</th><th>Unit</th><th>Breakdown</th><th>Unit</th><th>State</th><th>Move Qty</th><th>Shifts</th><th>Type</th><th></th></tr></thead>
+        <tbody id="opBody"><tr class="empty-row"><td colspan="14">No operations — click "+ Add Op" to begin</td></tr></tbody></table>
       </div>
     </div>
   </div>
@@ -422,7 +422,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="sline"><span class="sl">Required Pace</span><span class="sv a" id="sum-pace">—</span></div>
           <div class="sline"><span class="sl">Cycle Time Needed</span><span class="sv" id="sum-cycle">—</span></div>
           <div class="sline"><span class="sl">Bottleneck Op</span><span class="sv o" id="sum-bn">—</span></div>
-          <div class="sline"><span class="sl">Total Operation Hours</span><span class="sv" id="sum-total-hours">—</span></div>
+          <div class="sline"><span class="sl">Remaining Operation Hours</span><span class="sv" id="sum-total-hours">—</span></div>
           <div class="sline"><span class="sl">Bottleneck Hours</span><span class="sv o" id="sum-bn-hours">—</span></div>
           <div class="sline"><span class="sl">Machine Hours by Machine</span><span class="sv" id="sum-machine-hours">—</span></div>
           <div class="sline"><span class="sl">Shift Coverage by Op</span><span class="sv" id="sum-shift-coverage">—</span></div>
@@ -642,20 +642,63 @@ function opCycleMin(o){
 function opSetupMin(o){
   return (parseFloat(o.setup)||0)*(o.setupUnit==='hr'?60:1);
 }
-function opCapacity(o,parts=1,includeSetup=true,availability=1){
-  const cycle=opCycleMin(o), setup=includeSetup?opSetupMin(o):0, net=netShiftMinutes()*Math.max(0,Math.min(1,availability||1));
-  if(cycle<=0||net<=0) return null;
-  const totalMin=setup+(Math.max(0,parts)*cycle);
+function opBreakdownMin(o){
+  return (parseFloat(o.breakdown)||0)*(o.breakdownUnit==='hr'?60:1);
+}
+function opState(o){
+  return o?.state||'not_setup';
+}
+function opStateLabel(o){
+  return {
+    not_setup:'Not Set Up',
+    running:'Set Up / Running',
+    run_complete:'Run Complete',
+    broken_down:'Broken Down'
+  }[opState(o)]||'Not Set Up';
+}
+function opSetupRemainingMin(o,includeSetup=true){
+  return includeSetup&&opState(o)==='not_setup'?opSetupMin(o):0;
+}
+function opBreakdownRemainingMin(o){
+  return opState(o)==='broken_down'?0:opBreakdownMin(o);
+}
+function opRemainingQty(o,fallbackParts=0){
+  const fallback=Math.max(0,parseInt(fallbackParts)||0);
+  if(!workOrders.length) return fallback;
+  const route=routeOps().map(x=>String(x.num));
+  const opIdx=route.indexOf(String(o.num));
+  if(opIdx<0) return fallback;
+  return workOrders.reduce((sum,raw)=>{
+    const w=normalizeWO(raw);
+    const qty=Math.max(0,parseInt(w.qty)||0);
+    if(!qty||w.status==='Complete'||w.currentOp==='COMPLETE') return sum;
+    const doneOps=new Set((w.completedOps||[]).map(String));
+    if(doneOps.has(String(o.num))) return sum;
+    const curIdx=route.indexOf(String(w.currentOp||''));
+    if(curIdx<0) return sum+qty;
+    if(curIdx>opIdx) return sum;
+    if(curIdx===opIdx) return sum+Math.max(0,qty-woCurrentDone(w));
+    return sum+qty;
+  },0);
+}
+function opCapacity(o,parts=1,includeSetup=true,availability=1,useTravelerProgress=true){
+  const cycle=opCycleMin(o), net=netShiftMinutes()*Math.max(0,Math.min(1,availability||1));
+  const qty=useTravelerProgress?opRemainingQty(o,parts):Math.max(0,parseInt(parts)||0);
+  const setup=opSetupRemainingMin(o,includeSetup);
+  const breakdown=opBreakdownRemainingMin(o);
+  const runMin=opState(o)==='run_complete'||opState(o)==='broken_down'?0:qty*cycle;
+  if((cycle<=0&&setup<=0&&breakdown<=0)||net<=0) return null;
+  const totalMin=setup+runMin+breakdown;
   const shifts=Math.ceil(totalMin/net);
   const shiftCount=opShiftCount(o);
   const days=totalMin/(net*shiftCount);
   const calendarDays=Math.ceil(days);
-  const firstShiftParts=Math.max(0,Math.floor((net-setup)/cycle));
-  const normalShiftParts=Math.max(0,Math.floor(net/cycle));
-  return {op:o,cycle,setup,totalMin,shifts,shiftCount,days,calendarDays,firstShiftParts,normalShiftParts,setupPlusFirst:setup+cycle,fitsFirstPart:setup+cycle<=net};
+  const firstShiftParts=cycle>0?Math.max(0,Math.floor((net-setup)/cycle)):0;
+  const normalShiftParts=cycle>0?Math.max(0,Math.floor(net/cycle)):0;
+  return {op:o,cycle,setup,breakdown,runMin,qty,totalMin,shifts,shiftCount,days,calendarDays,firstShiftParts,normalShiftParts,setupPlusFirst:setup+cycle,fitsFirstPart:cycle<=0||setup+cycle<=net};
 }
-function jobCapacity(parts,includeSetup=true,availability=1){
-  const caps=ops.map(o=>opCapacity(o,parts,includeSetup,availability)).filter(Boolean);
+function jobCapacity(parts,includeSetup=true,availability=1,useTravelerProgress=true){
+  const caps=ops.map(o=>opCapacity(o,parts,includeSetup,availability,useTravelerProgress)).filter(Boolean);
   if(!caps.length) return null;
   const bottleneck=caps.reduce((slow,c)=>!slow||c.days>slow.days||c.totalMin>slow.totalMin?c:slow,null);
   const maxShifts=Math.max(...caps.map(c=>c.shifts));
@@ -665,16 +708,15 @@ function jobCapacity(parts,includeSetup=true,availability=1){
   return {caps,bottleneck,maxShifts,maxDays,maxCalendarDays,maxHours};
 }
 function operationHourStats(parts){
-  const qty=Math.max(0,parts||0);
   const byMachine={};
   const shiftLoad=[];
   let total=0,bottleneck=0,bottleneckOp=null,bottleneckDays=0,bottleneckDayOp=null;
   ops.forEach(o=>{
-    const cycle=opCycleMin(o), setup=opSetupMin(o);
-    if(cycle<=0&&setup<=0) return;
-    const hrs=(setup+(qty*cycle))/60;
-    const shiftCount=opShiftCount(o);
-    const days=netShiftMinutes()>0?hrs/(netShiftMinutes()/60)/shiftCount:0;
+    const cap=opCapacity(o,parts,true,1,true);
+    if(!cap) return;
+    const hrs=cap.totalMin/60;
+    const shiftCount=cap.shiftCount;
+    const days=cap.days;
     total+=hrs;
     const machine=(o.machine||'Unassigned').trim()||'Unassigned';
     byMachine[machine]=(byMachine[machine]||0)+hrs;
@@ -1321,7 +1363,7 @@ function addOp(){
   opC++;
   const nums=ops.map(o=>parseFloat(o.num)).filter(Number.isFinite);
   const num=nums.length?Math.max(...nums)+10:10;
-  ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',cycleUnit:'min',setupUnit:'min',moveQty:1,shiftCount:1,type:'sequential'});
+  ops.push({id:opC,num,desc:'',machine:'',cycle:'',setup:'',breakdown:'',cycleUnit:'min',setupUnit:'min',breakdownUnit:'min',state:'not_setup',moveQty:1,shiftCount:1,type:'sequential'});
   renderOps(); renderWOs(); recalc();
 }
 function removeOp(id){ ops=ops.filter(o=>o.id!==id); renderOps(); renderWOs(); recalc(); }
@@ -1329,7 +1371,7 @@ function opCh(id,f,v){ const o=ops.find(o=>o.id===id); if(o) o[f]=v; recalc(); r
 function clearOps(){ if(!confirm('Clear all operations?')) return; ops=[]; opC=0; renderOps(); renderWOs(); recalc(); }
 function renderOps(){
   const tb=document.getElementById('opBody');
-  if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="11">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
+  if(!ops.length){ tb.innerHTML='<tr class="empty-row"><td colspan="14">No operations — click "+ Add Op" to begin</td></tr>'; renderToolOpDDs(); return; }
   tb.innerHTML=ops.map(o=>`<tr>
     <td data-label="Op #"><span class="op-badge">OP ${o.num}</span></td>
     <td data-label="Description"><input type="text" value="${escHtml(o.desc)}" placeholder="e.g. Turn OD" oninput="opCh(${o.id},'desc',this.value)"></td>
@@ -1338,6 +1380,9 @@ function renderOps(){
     <td data-label="Cycle Unit"><select onchange="opCh(${o.id},'cycleUnit',this.value)" style="width:55px"><option value="min" ${(o.cycleUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.cycleUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
     <td data-label="Setup Time"><input type="number" value="${escHtml(o.setup)}" placeholder="0" min="0" step="0.01" oninput="opCh(${o.id},'setup',this.value)" style="width:70px"></td>
     <td data-label="Setup Unit"><select onchange="opCh(${o.id},'setupUnit',this.value)" style="width:55px"><option value="min" ${(o.setupUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.setupUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
+    <td data-label="Breakdown"><input type="number" value="${escHtml(o.breakdown)}" placeholder="0" min="0" step="0.01" oninput="opCh(${o.id},'breakdown',this.value)" style="width:70px"></td>
+    <td data-label="Breakdown Unit"><select onchange="opCh(${o.id},'breakdownUnit',this.value)" style="width:55px"><option value="min" ${(o.breakdownUnit||'min')==='min'?'selected':''}>min</option><option value="hr" ${(o.breakdownUnit||'min')==='hr'?'selected':''}>hr</option></select></td>
+    <td data-label="State"><select onchange="opCh(${o.id},'state',this.value)" style="width:135px"><option value="not_setup" ${opState(o)==='not_setup'?'selected':''}>Not Set Up</option><option value="running" ${opState(o)==='running'?'selected':''}>Set Up / Running</option><option value="run_complete" ${opState(o)==='run_complete'?'selected':''}>Run Complete</option><option value="broken_down" ${opState(o)==='broken_down'?'selected':''}>Broken Down</option></select></td>
     <td data-label="Move Qty"><input type="number" value="${escHtml(o.moveQty||1)}" min="1" step="1" oninput="opCh(${o.id},'moveQty',this.value)" style="width:70px"></td>
     <td data-label="Shifts"><select onchange="opCh(${o.id},'shiftCount',this.value)" style="width:82px"><option value="1" ${opShiftCount(o)===1?'selected':''}>1 shift</option><option value="2" ${opShiftCount(o)===2?'selected':''}>2 shifts</option></select></td>
     <td data-label="Type"><select onchange="opCh(${o.id},'type',this.value)"><option value="sequential" ${o.type==='sequential'?'selected':''}>Sequential</option><option value="parallel" ${o.type==='parallel'?'selected':''}>Parallel</option></select></td>
@@ -1467,7 +1512,7 @@ function updateProgressReality(){
   const reqPace=remainingShifts>0?remaining/remainingShifts:0;
   const reqCycle=reqPace>0?netShiftMinutes()/reqPace:0;
   const includeSetup=done<=0;
-  const plan=jobCapacity(remaining,includeSetup,uptime);
+  const plan=jobCapacity(remaining,includeSetup,uptime,true);
   let cap=0,cycleSource='no cycle data',fitWarnings=[];
   if(actualMin>0){
     cap=Math.floor((netShiftMinutes()*uptime)/actualMin);
@@ -1475,7 +1520,7 @@ function updateProgressReality(){
   }else if(plan){
     const b=plan.bottleneck;
     cap=includeSetup?b.firstShiftParts:b.normalShiftParts;
-    cycleSource=`setup-aware bottleneck OP ${b.op.num}`;
+    cycleSource=`setup/breakdown-aware bottleneck OP ${b.op.num}`;
     fitWarnings=plan.caps.filter(c=>!c.fitsFirstPart).map(c=>`OP ${c.op.num} setup + first part needs ${formatCycleTime(c.setupPlusFirst)}, longer than one net shift.`);
   }
   const finishShifts=actualMin>0&&cap>0&&remaining>0?Math.ceil(remaining/cap):(plan?plan.maxShifts:0);
@@ -1551,7 +1596,7 @@ function updateSummary(){
   document.getElementById('sum-wo-qty').textContent=workOrders.length?woQty.toLocaleString()+' pcs':'—';
   document.getElementById('sum-pace').textContent=pace;
   document.getElementById('sum-cycle').textContent=cyc;
-  document.getElementById('sum-bn').textContent=bn?'OP '+bn.num+' ('+formatCycleTime(opCycleMin(bn))+'/part, '+formatCycleTime(opSetupMin(bn))+' setup)':'—';
+  document.getElementById('sum-bn').textContent=bn?'OP '+bn.num+' ('+formatCycleTime(opCycleMin(bn))+'/part, '+formatCycleTime(opSetupMin(bn))+' setup, '+formatCycleTime(opBreakdownMin(bn))+' breakdown, '+opStateLabel(bn)+')':'—';
   document.getElementById('sum-total-hours').textContent=totalHrs;
   document.getElementById('sum-bn-hours').textContent=bnHrs;
   document.getElementById('sum-machine-hours').textContent=machineHours||'—';
@@ -1585,18 +1630,18 @@ function runQuery(){
   const queryShifts=wd*shiftsPerDay();
   const pace=qp/queryShifts;
   const cyc=netShiftMinutes()/pace;
-  const plan=jobCapacity(qp,true,1);
+  const plan=jobCapacity(qp,true,1,false);
   const totalHrs=plan?plan.maxHours:(qp*cyc)/60;
   const calDays=Math.round((td-fd)/86400000)+1;
 
   let bnStr='';
   if(plan&&plan.bottleneck){
     const b=plan.bottleneck;
-    const opWindowShifts=wd*b.shiftCount;
-    const maxParts=(Math.max(0,b.firstShiftParts)+(Math.max(0,opWindowShifts-1)*b.normalShiftParts));
+    const opWindowMin=wd*b.shiftCount*netShiftMinutes();
+    const maxParts=b.cycle>0?Math.max(0,Math.floor((opWindowMin-b.setup-b.breakdown)/b.cycle)):0;
     bnStr=maxParts<qp
-      ? `<br><span style="color:var(--red)">⚠ WARNING: OP ${b.op.num} setup-aware capacity limits output to ${maxParts.toLocaleString()} parts — ${(qp-maxParts).toLocaleString()} short.</span>`
-      : `<br><span style="color:var(--green)">✓ Achievable: setup-aware bottleneck allows up to ${maxParts.toLocaleString()} parts in this window.</span>`;
+      ? `<br><span style="color:var(--red)">⚠ WARNING: OP ${b.op.num} setup/breakdown-aware capacity limits output to ${maxParts.toLocaleString()} parts — ${(qp-maxParts).toLocaleString()} short.</span>`
+      : `<br><span style="color:var(--green)">✓ Achievable: setup/breakdown-aware bottleneck allows up to ${maxParts.toLocaleString()} parts in this window.</span>`;
     if(!b.fitsFirstPart) bnStr+=`<br><span style="color:var(--red)">OP ${b.op.num} setup + first part needs ${formatCycleTime(b.setupPlusFirst)}, longer than one net shift.</span>`;
   }
 
@@ -1745,8 +1790,8 @@ function getJobContext(){
     bnHrs=stats.bottleneck>0?stats.bottleneck.toFixed(1)+' hrs':'unknown';
   }
   const opsText=ops.length?ops.map(o=>{
-    const cap=opCapacity(o,tp,true,1);
-    return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, one-time setup=${o.setup||0} ${o.setupUnit||'min'}, move qty=${o.moveQty||1}, shift coverage=${opShiftLabel(o)}, calendar load=${cap?cap.days.toFixed(1)+' working days':'unknown'}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
+    const cap=opCapacity(o,tp,true,1,true);
+    return `OP ${o.num}: ${o.desc||'unnamed'}, cycle=${o.cycle} ${o.cycleUnit||'min'}, setup=${o.setup||0} ${o.setupUnit||'min'}, breakdown=${o.breakdown||0} ${o.breakdownUnit||'min'}, state=${opStateLabel(o)}, remaining qty=${cap?cap.qty:'unknown'}, move qty=${o.moveQty||1}, shift coverage=${opShiftLabel(o)}, remaining calendar load=${cap?cap.days.toFixed(1)+' working days':'unknown'}, first shift capacity=${cap?cap.firstShiftParts:'unknown'}, normal shift capacity=${cap?cap.normalShiftParts:'unknown'}, setup+first-part fits shift=${cap?cap.fitsFirstPart:'unknown'}`;
   }).join('; '):'None defined';
   const woText=workOrders.length?workOrders.map(raw=>{
     const w=normalizeWO(raw);
@@ -1779,7 +1824,7 @@ Plant Closures: ${holidays.length} day(s) — ${holidays.join(', ')||'none'}
 Working Days Available: ${wd!==null?wd:'unknown'}
 Required Pace: ${pace}
 Cycle Time Needed: ${cyc}
-Total Operation Hours: ${totalHrs}
+Remaining Operation Hours: ${totalHrs}
 Bottleneck Hours: ${bnHrs}
 Work Orders / Travelers: ${woText}
 Traveler Batches: ${batchSummary.text||'None defined'}
