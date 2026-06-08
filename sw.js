@@ -1,7 +1,8 @@
-const CACHE_NAME = 'cnc-cell-planner-v20-version-info';
+const CACHE_NAME = 'cnc-cell-planner-v21-update-helper';
 const APP_SHELL = [
   './',
   './index.html',
+  './update-helper.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -23,16 +24,31 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
+  const url = new URL(event.request.url);
+  const freshFirst = event.request.mode === 'navigate' || /\.(html|js|css|json)$/i.test(url.pathname);
+
+  if (freshFirst) {
+    event.respondWith(
+      fetch(event.request).then(response => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
-      }).catch(() => caches.match('./index.html'));
-    })
+      }).catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+      return response;
+    }).catch(() => caches.match('./index.html')))
   );
 });
