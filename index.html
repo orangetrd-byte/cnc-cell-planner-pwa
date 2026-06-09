@@ -324,7 +324,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="field"><label>Start #</label><input type="number" id="woStartNum" min="1" value="1"></div>
           <div class="field"><label>Travelers</label><input type="number" id="woBatchCount" min="1" value="1"></div>
           <div class="field"><label>Qty Each</label><input type="number" id="woQtyEach" min="1" placeholder="10"></div>
-          <div class="field"><label>Status</label><select id="woBatchStatus"><option>Not Started</option><option>In Process</option><option>Hold</option><option>Complete</option></select></div>
+          <div class="field"><label>Status</label><select id="woBatchStatus"><option>Not Started</option><option>In Process</option><option>Waiting Inspection</option><option>Inspection Passed</option><option>Inspection Rejected</option><option>Inspection Hold</option><option>Hold</option><option>Complete</option></select></div>
           <button class="btn btn-primary" onclick="createTravelerBatch()">Create Batch</button>
         </div>
       </div>
@@ -500,7 +500,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v22-query-setup-mode · Updated 2026-06-09 · Cache v22</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v23-inspection-status · Updated 2026-06-09 · Cache v23</div>
     </div>
   </div>
 
@@ -514,6 +514,8 @@ let aiBusy=false;
 let aiLastAskAt=0;
 const SK='cnc-v1';
 const GOV_HOLIDAY_SPAN=2;
+const WO_STATUS_OPTIONS=['Not Started','In Process','Waiting Inspection','Inspection Passed','Inspection Rejected','Inspection Hold','Hold','Complete'];
+const WO_ADVANCE_BLOCK_STATUSES=new Set(['Waiting Inspection','Inspection Rejected','Inspection Hold','Hold','Complete']);
 const AI_PROFILES={
   gemini:{
     label:'Gemini',
@@ -1082,6 +1084,20 @@ function normalizeWO(w){
   wo.completedOps=[...new Set(wo.completedOps)];
   return wo;
 }
+function woStatusOptions(cur){
+  return WO_STATUS_OPTIONS.map(status=>`<option ${cur===status?'selected':''}>${status}</option>`).join('');
+}
+function woBlocksAdvance(w){
+  return WO_ADVANCE_BLOCK_STATUSES.has(w.status||'Not Started');
+}
+function woAdvanceBlockReason(w){
+  if(!w.currentOp||w.currentOp==='COMPLETE'||w.status==='Complete') return 'Complete';
+  if(w.status==='Waiting Inspection') return 'Waiting inspection';
+  if(w.status==='Inspection Rejected') return 'Inspection rejected';
+  if(w.status==='Inspection Hold') return 'Inspection hold';
+  if(w.status==='Hold') return 'On hold';
+  return '';
+}
 function woCurrentDone(w){
   if(!w.currentOp||w.currentOp==='COMPLETE') return 0;
   return Math.max(0,parseInt(w.opProgress?.[String(w.currentOp)])||0);
@@ -1092,7 +1108,7 @@ function woReleaseReady(w){
 }
 function woCanAdvance(w){
   const cur=w.currentOp || (w.status==='Complete' ? 'COMPLETE' : firstRouteOp());
-  return !!cur&&cur!=='COMPLETE'&&w.status!=='Hold'&&w.status!=='Complete'&&woReleaseReady(w);
+  return !!cur&&cur!=='COMPLETE'&&!woBlocksAdvance(w)&&woReleaseReady(w);
 }
 function completedOpsText(w){
   const done=Array.isArray(w.completedOps)?w.completedOps:[];
@@ -1125,7 +1141,8 @@ function travelerFlowText(w){
   const nextText=next==='COMPLETE'?'COMPLETE':(next?'OP '+next:'--');
   const move=w.currentOp==='COMPLETE'?0:opMoveQty(w.currentOp);
   const done=woCurrentDone(w);
-  const release=w.currentOp==='COMPLETE'?'Complete':(woCanAdvance(w)?'<span class="ready-pill">Ready</span>':`Needs ${Math.max(0,move-done)} more`);
+  const block=woAdvanceBlockReason(w);
+  const release=w.currentOp==='COMPLETE'?'Complete':(woCanAdvance(w)?'<span class="ready-pill">Ready</span>':(block||`Needs ${Math.max(0,move-done)} more`));
   return `Completed: ${completedOpsText(w)}<br>Current: ${cur}<br>Next: ${nextText}<br><span style="color:${woCanAdvance(w)||w.currentOp==='COMPLETE'?'var(--green)':'var(--text-dim)'}">${release}${w.currentOp!=='COMPLETE'?` (${done}/${move})`:''}</span>`;
 }
 function renderReadyQueue(){
@@ -1156,6 +1173,7 @@ function renderWOSummary(){
   }
   const route=routeOps();
   const counts={Complete:0};
+  const statusCounts={};
   const batches={};
   route.forEach(o=>counts['OP '+o.num]=0);
   workOrders.forEach(raw=>{
@@ -1164,11 +1182,15 @@ function renderWOSummary(){
     if(!batches[batch]) batches[batch]={count:0,qty:0};
     batches[batch].count++;
     batches[batch].qty+=parseInt(w.qty)||0;
+    statusCounts[w.status]=(statusCounts[w.status]||0)+1;
     if(w.status==='Complete'||w.currentOp==='COMPLETE') counts.Complete++;
     else if(w.currentOp) counts['OP '+w.currentOp]=(counts['OP '+w.currentOp]||0)+1;
   });
   const chips=Object.entries(batches).map(([batch,b])=>`<div class="chip">${escHtml(batch)}: ${b.count} traveler(s), ${b.qty.toLocaleString()} pcs</div>`);
   route.forEach(o=>chips.push(`<div class="chip">OP ${o.num}: ${counts['OP '+o.num]||0}</div>`));
+  ['Waiting Inspection','Inspection Passed','Inspection Rejected','Inspection Hold'].forEach(status=>{
+    if(statusCounts[status]) chips.push(`<div class="chip">${status}: ${statusCounts[status]}</div>`);
+  });
   chips.push(`<div class="chip">Ready: ${workOrders.map(normalizeWO).filter(woCanAdvance).length}</div>`);
   chips.push(`<div class="chip">Complete: ${counts.Complete||0}</div>`);
   el.innerHTML=chips.join('');
@@ -1228,7 +1250,7 @@ function woProgressCh(id,v){
 }
 function advanceWO(id){
   const w=workOrders.find(w=>w.id===id);
-  if(!w||w.status==='Hold'||w.status==='Complete') return;
+  if(!w||!woCanAdvance(normalizeWO(w))) return;
   const route=routeOps();
   if(!route.length) return;
   const current=String(w.currentOp||firstRouteOp());
@@ -1292,7 +1314,7 @@ function renderWOs(){
     const canAdvance=woCanAdvance(w);
     const doneAtOp=woCurrentDone(w);
     const releaseTitle=cur==='COMPLETE'?'Complete':`Move Qty ${opMoveQty(cur)}`;
-    const rowClass=canAdvance?' class="ready-row"':(w.status==='Hold'?' class="hold-row"':'');
+    const rowClass=canAdvance?' class="ready-row"':(woBlocksAdvance(w)&&w.status!=='Complete'?' class="hold-row"':'');
 
     return `
       <tr${rowClass}>
@@ -1340,17 +1362,14 @@ function renderWOs(){
 
         <td data-label="Status">
           <select onchange="woCh(${w.id},'status',this.value)">
-            <option ${w.status==='Not Started'?'selected':''}>Not Started</option>
-            <option ${w.status==='In Process'?'selected':''}>In Process</option>
-            <option ${w.status==='Complete'?'selected':''}>Complete</option>
-            <option ${w.status==='Hold'?'selected':''}>Hold</option>
+            ${woStatusOptions(w.status)}
           </select>
         </td>
 
         <td data-label="Advance">
           <button class="btn btn-primary btn-sm"
                   onclick="advanceWO(${w.id})"
-                  title="${canAdvance?'Move to next operation':'Enter enough Done @ Op to meet Move Qty'}"
+                  title="${canAdvance?'Move to next operation':(woAdvanceBlockReason(w)||'Enter enough Done @ Op to meet Move Qty')}"
                   ${canAdvance?'':'disabled'}>
             ▶
           </button>
