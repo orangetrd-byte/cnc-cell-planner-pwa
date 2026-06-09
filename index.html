@@ -116,13 +116,17 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 .ready-row{background:var(--green-light)}
 .ready-row:hover{background:#dff0e3}
 .hold-row{background:var(--yellow-light)}
-.release-panel{display:none;margin-bottom:11px;background:var(--green-light);border:1px solid rgba(40,167,69,.24);border-radius:var(--radius-sm);padding:11px}
+.release-panel{display:none;margin-bottom:11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px}
 .release-panel.show{display:block}
 .release-title{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.release-title.waiting{color:#92400e;margin-top:11px}
 .release-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .release-card{background:#fff;border:1px solid rgba(40,167,69,.22);border-radius:var(--radius-sm);padding:9px 10px;font-size:12px;line-height:1.45}
+.release-card.waiting{border-color:rgba(245,158,11,.32);background:#fffdf5}
 .release-card b{font-family:var(--mono);color:var(--text)}
 .release-meta{display:block;color:var(--text-dim);font-size:11px;margin-top:2px}
+.status-pill{display:inline-block;margin-left:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:1px 6px;font-family:var(--mono);font-size:10px;color:var(--text-dim);white-space:nowrap}
+.status-pill.waiting{background:var(--yellow-light);border-color:rgba(245,158,11,.28);color:#92400e}
 .ready-pill{display:inline-block;background:var(--green);color:#fff;border-radius:6px;padding:2px 7px;font-family:var(--mono);font-size:10px;font-weight:600;white-space:nowrap}
 .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .sum-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px}
@@ -500,7 +504,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v23-inspection-status · Updated 2026-06-09 · Cache v23</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v24-waiting-status-cards · Updated 2026-06-09 · Cache v24</div>
     </div>
   </div>
 
@@ -1145,23 +1149,33 @@ function travelerFlowText(w){
   const release=w.currentOp==='COMPLETE'?'Complete':(woCanAdvance(w)?'<span class="ready-pill">Ready</span>':(block||`Needs ${Math.max(0,move-done)} more`));
   return `Completed: ${completedOpsText(w)}<br>Current: ${cur}<br>Next: ${nextText}<br><span style="color:${woCanAdvance(w)||w.currentOp==='COMPLETE'?'var(--green)':'var(--text-dim)'}">${release}${w.currentOp!=='COMPLETE'?` (${done}/${move})`:''}</span>`;
 }
+function travelerQueueCard(w,kind='ready'){
+  const next=nextRouteOp(w.currentOp);
+  const nextText=next==='COMPLETE'?'COMPLETE':`OP ${next}`;
+  const op=ops.find(o=>String(o.num)===String(w.currentOp));
+  const machine=(op?.machine||'Unassigned').trim()||'Unassigned';
+  const status=escHtml(w.status||'Not Started');
+  const statusClass=kind==='waiting'?'status-pill waiting':'status-pill';
+  const cardClass=kind==='waiting'?'release-card waiting':'release-card';
+  const detail=kind==='waiting'
+    ? `${woAdvanceBlockReason(w)||'Waiting'} &middot; OP ${escHtml(w.currentOp||'--')} &middot; ${escHtml(machine)}`
+    : `OP ${escHtml(w.currentOp)} ready for ${escHtml(nextText)} &middot; ${escHtml(machine)}`;
+  return `<div class="${cardClass}"><b>${escHtml(w.num||'WO')}</b> ${escHtml(w.batch||'Unbatched')}<span class="${statusClass}">${status}</span><span class="release-meta">${detail}</span></div>`;
+}
 function renderReadyQueue(){
   const el=document.getElementById('readyQueue');
   if(!el) return;
-  const ready=workOrders.map(normalizeWO).filter(woCanAdvance);
-  if(!ready.length){
+  const travelers=workOrders.map(normalizeWO);
+  const ready=travelers.filter(woCanAdvance);
+  const waiting=travelers.filter(w=>woBlocksAdvance(w)&&w.status!=='Complete'&&w.currentOp!=='COMPLETE');
+  if(!ready.length&&!waiting.length){
     el.classList.remove('show');
     el.innerHTML='';
     return;
   }
-  const cards=ready.map(w=>{
-    const next=nextRouteOp(w.currentOp);
-    const nextText=next==='COMPLETE'?'COMPLETE':`OP ${next}`;
-    const op=ops.find(o=>String(o.num)===String(w.currentOp));
-    const machine=(op?.machine||'Unassigned').trim()||'Unassigned';
-    return `<div class="release-card"><b>${escHtml(w.num||'WO')}</b> ${escHtml(w.batch||'Unbatched')}<span class="release-meta">OP ${escHtml(w.currentOp)} ready for ${escHtml(nextText)} &middot; ${escHtml(machine)}</span></div>`;
-  }).join('');
-  el.innerHTML=`<div class="release-title">${ready.length} ready for next operation</div><div class="release-list">${cards}</div>`;
+  const readyHtml=ready.length?`<div class="release-title">${ready.length} ready for next operation</div><div class="release-list">${ready.map(w=>travelerQueueCard(w,'ready')).join('')}</div>`:'';
+  const waitingHtml=waiting.length?`<div class="release-title waiting">${waiting.length} waiting / held</div><div class="release-list">${waiting.map(w=>travelerQueueCard(w,'waiting')).join('')}</div>`:'';
+  el.innerHTML=readyHtml+waitingHtml;
   el.classList.add('show');
 }
 function renderWOSummary(){

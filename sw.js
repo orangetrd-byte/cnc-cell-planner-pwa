@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v23-inspection-status';
+const CACHE_NAME = 'cnc-cell-planner-v24-waiting-status-cards';
 const APP_SHELL = [
   './',
   './index.html',
