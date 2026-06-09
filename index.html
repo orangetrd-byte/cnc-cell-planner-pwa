@@ -438,6 +438,10 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="sline"><span class="sl">Machine Hours by Machine</span><span class="sv" id="sum-machine-hours">—</span></div>
           <div class="sline"><span class="sl">Shift Coverage by Op</span><span class="sv" id="sum-shift-coverage">—</span></div>
           <div class="sline"><span class="sl">Bottleneck Calendar Load</span><span class="sv o" id="sum-bn-days">—</span></div>
+          <div class="sline"><span class="sl">Forecast From</span><span class="sv" id="sum-forecast-from">—</span></div>
+          <div class="sline"><span class="sl">Projected Finish</span><span class="sv o" id="sum-projected-finish">—</span></div>
+          <div class="sline"><span class="sl">Deadline Margin</span><span class="sv" id="sum-deadline-margin">—</span></div>
+          <div class="sline"><span class="sl">Op Time Frames</span><span class="sv" id="sum-op-timeframes">—</span></div>
           <div class="sline"><span class="sl">Operations</span><span class="sv" id="sum-ops">—</span></div>
           <div class="sline"><span class="sl">Completed Op Steps</span><span class="sv g" id="sum-completed-op-steps">—</span></div>
           <div class="sline"><span class="sl">Completed by Op</span><span class="sv" id="sum-completed-by-op">—</span></div>
@@ -504,7 +508,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v24-waiting-status-cards · Updated 2026-06-09 · Cache v24</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v25-time-frame-forecast · Updated 2026-06-09 · Cache v25</div>
     </div>
   </div>
 
@@ -742,6 +746,29 @@ function operationHourStats(parts){
     ? shiftLoad.map(x=>`OP ${x.op.num}: ${opShiftLabel(x.op)}, ${x.days.toFixed(1)} day(s)`).join(' · ')
     : '—';
   return {total,bottleneck,bottleneckOp,bottleneckDays,bottleneckDayOp,byMachine,shiftLoad,shiftCoverageText};
+}
+function timeFrameForecast(parts,stats){
+  const dpw=parseInt(document.getElementById('daysPerWeek').value)||5;
+  const hset=new Set(holidays);
+  const today=iso(new Date());
+  const progressDate=document.getElementById('progressDate')?.value||'';
+  const startDate=document.getElementById('startDate')?.value||'';
+  const deadline=document.getElementById('endDate')?.value||'';
+  const forecastFrom=maxIso(progressDate||today,startDate||today);
+  if(!stats?.shiftLoad?.length||!forecastFrom) return null;
+  const sorted=stats.shiftLoad.slice().sort((a,b)=>(parseFloat(a.op.num)||0)-(parseFloat(b.op.num)||0));
+  let cumulativeDays=0;
+  const opFrames=sorted.map(x=>{
+    cumulativeDays+=x.days;
+    const daysNeeded=Math.ceil(cumulativeDays);
+    const finish=daysNeeded>0?addWorkDays(forecastFrom,daysNeeded,dpw,hset):pd(forecastFrom);
+    return `OP ${x.op.num}: ${x.days.toFixed(1)}d, finish ${finish?iso(finish):'—'}`;
+  });
+  const totalDaysNeeded=Math.ceil(cumulativeDays);
+  const projectedFinish=totalDaysNeeded>0?addWorkDays(forecastFrom,totalDaysNeeded,dpw,hset):pd(forecastFrom);
+  const deadlineDays=deadline?workDays(forecastFrom,deadline,dpw,hset):null;
+  const margin=deadlineDays!==null?deadlineDays-totalDaysNeeded:null;
+  return {forecastFrom,totalWorkingDays:cumulativeDays,projectedFinish:projectedFinish?iso(projectedFinish):'',deadlineDays,margin,opFrames};
 }
 function workOrderQty(){
   return workOrders.reduce((sum,w)=>sum+(parseInt(w.qty)||0),0);
@@ -1613,6 +1640,7 @@ function updateSummary(){
     bnHrs=stats.bottleneck>0?stats.bottleneck.toFixed(1)+' hrs':'—';
   }
   const stats=operationHourStats(tp);
+  const forecast=timeFrameForecast(tp,stats);
   const bn=stats.bottleneckOp;
   const bnDayOp=stats.bottleneckDayOp;
   const machineHours=Object.entries(stats.byMachine).map(([m,h])=>`${m}: ${h.toFixed(1)}h`).join(' · ');
@@ -1643,6 +1671,11 @@ function updateSummary(){
   document.getElementById('sum-machine-hours').textContent=machineHours||'—';
   document.getElementById('sum-shift-coverage').textContent=stats.shiftCoverageText||'—';
   document.getElementById('sum-bn-days').textContent=bnDayOp?`OP ${bnDayOp.num}: ${stats.bottleneckDays.toFixed(1)} working day(s) @ ${opShiftLabel(bnDayOp)}`:'—';
+  document.getElementById('sum-forecast-from').textContent=forecast?forecast.forecastFrom:'—';
+  document.getElementById('sum-projected-finish').textContent=forecast?`${forecast.projectedFinish||'—'} (${forecast.totalWorkingDays.toFixed(1)} working day route load)`:'—';
+  document.getElementById('sum-deadline-margin').textContent=forecast&&forecast.margin!==null?`${forecast.margin>=0?'+':''}${forecast.margin} working day(s)`:'—';
+  document.getElementById('sum-deadline-margin').style.color=forecast&&forecast.margin!==null&&forecast.margin<0?'var(--red)':'';
+  document.getElementById('sum-op-timeframes').textContent=forecast?forecast.opFrames.join(' · '):'—';
   document.getElementById('sum-ops').textContent=ops.length;
   document.getElementById('sum-completed-op-steps').textContent=completedStats.possible?`${completedStats.total}/${completedStats.possible}`:(completedStats.total||'—');
   document.getElementById('sum-completed-by-op').textContent=completedStats.byOpText;
