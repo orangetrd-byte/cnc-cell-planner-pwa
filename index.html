@@ -291,6 +291,13 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
           <div class="field"><label>To Date</label><input type="date" id="q-to"></div>
         </div>
         <div class="field" style="margin-top:10px"><label>Parts Override (optional — leave blank to use job qty)</label><input type="number" id="q-parts" placeholder="160"></div>
+        <div class="field" style="margin-top:10px">
+          <label>Setup Mode</label>
+          <select id="q-setup-mode">
+            <option value="include">Fresh setup / first piece required</option>
+            <option value="skip">Continuation run / setup already done</option>
+          </select>
+        </div>
         <div class="btn-row">
           <button class="btn btn-green" onclick="runQuery()">▶ Calculate Run Time</button>
           <button class="btn btn-ghost btn-sm" onclick="clearQuery()">Clear</button>
@@ -493,7 +500,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v20-version-info · Updated 2026-06-08 · Cache v20</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v22-query-setup-mode · Updated 2026-06-09 · Cache v22</div>
     </div>
   </div>
 
@@ -1615,6 +1622,7 @@ function runQuery(){
   const fs=document.getElementById('q-from').value;
   const ts=document.getElementById('q-to').value;
   const qp=parseInt(document.getElementById('q-parts').value)||parseInt(document.getElementById('totalParts').value)||0;
+  const includeSetup=(document.getElementById('q-setup-mode')?.value||'include')==='include';
   const dpw=parseInt(document.getElementById('daysPerWeek').value)||5;
   const hset=new Set(holidays);
   const res=document.getElementById('qResult');
@@ -1631,9 +1639,10 @@ function runQuery(){
   const queryShifts=wd*shiftsPerDay();
   const pace=qp/queryShifts;
   const cyc=netShiftMinutes()/pace;
-  const plan=jobCapacity(qp,true,1,false);
+  const plan=jobCapacity(qp,includeSetup,1,false);
   const totalHrs=plan?plan.maxHours:(qp*cyc)/60;
   const calDays=Math.round((td-fd)/86400000)+1;
+  const setupModeText=includeSetup?'Fresh setup included':'Continuation run, setup excluded';
 
   let bnStr='';
   if(plan&&plan.bottleneck){
@@ -1643,7 +1652,7 @@ function runQuery(){
     bnStr=maxParts<qp
       ? `<br><span style="color:var(--red)">⚠ WARNING: OP ${b.op.num} setup/breakdown-aware capacity limits output to ${maxParts.toLocaleString()} parts — ${(qp-maxParts).toLocaleString()} short.</span>`
       : `<br><span style="color:var(--green)">✓ Achievable: setup/breakdown-aware bottleneck allows up to ${maxParts.toLocaleString()} parts in this window.</span>`;
-    if(!b.fitsFirstPart) bnStr+=`<br><span style="color:var(--red)">OP ${b.op.num} setup + first part needs ${formatCycleTime(b.setupPlusFirst)}, longer than one net shift.</span>`;
+    if(includeSetup&&!b.fitsFirstPart) bnStr+=`<br><span style="color:var(--red)">OP ${b.op.num} setup + first part needs ${formatCycleTime(b.setupPlusFirst)}, longer than one net shift.</span>`;
   }
 
   res.className='qresult show';
@@ -1652,6 +1661,7 @@ function runQuery(){
     <span style="color:var(--text-dim)">Working days: <b>${wd}</b> &nbsp;|&nbsp; Calendar days: <b>${calDays}</b> &nbsp;|&nbsp; Closures excluded: <b>${holidays.length}</b></span>
     <br><br>
     Parts to run: <b>${qp.toLocaleString()}</b><br>
+    Setup mode: <b>${setupModeText}</b>${includeSetup?'':' <span style="color:var(--text-dim)">(breakdown still counts if entered)</span>'}<br>
     Required pace: <b>${pace.toFixed(2)} parts/shift</b><br>
     Cycle time needed: <b>${formatCycleTime(cyc)}/part</b><br>
     Total machine time: <b>${totalHrs.toFixed(1)} hrs</b> &nbsp;(${plan?plan.maxDays.toFixed(1):(totalHrs/(netShiftMinutes()/60)/shiftsPerDay()).toFixed(1)} working day(s) at assigned operation shifts)
@@ -1660,6 +1670,8 @@ function runQuery(){
 
 function clearQuery(){
   ['q-from','q-to','q-parts'].forEach(id=>document.getElementById(id).value='');
+  const setupMode=document.getElementById('q-setup-mode');
+  if(setupMode) setupMode.value='include';
   const r=document.getElementById('qResult'); r.className='qresult'; r.innerHTML='';
 }
 

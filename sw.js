@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v21-update-helper';
+const CACHE_NAME = 'cnc-cell-planner-v22-query-setup-mode';
 const APP_SHELL = [
   './',
   './index.html',
