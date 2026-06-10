@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v31-minimal-tooling-share';
+const CACHE_NAME = 'cnc-cell-planner-v32-tooling-share-no-pocket';
 const APP_SHELL = [
   './',
   './index.html',

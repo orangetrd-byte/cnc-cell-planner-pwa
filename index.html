@@ -509,7 +509,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v31-minimal-tooling-share · Updated 2026-06-10 · Cache v31</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v32-tooling-share-no-pocket · Updated 2026-06-10 · Cache v32</div>
     </div>
   </div>
 
@@ -1790,7 +1790,7 @@ function buildText(){
   if(!orderTools.length) return 'Nothing to buy.';
   return orderTools.map(t=>{
     const calc=toolOrderCalc(t,tp);
-    return `${t.pocket||'—'} - ${t.desc||'—'}\nOperation: OP ${t.op||'—'}\nBuy: ${calc.to} pack(s)`;
+    return `${t.desc||'—'}\nOperation: OP ${t.op||'—'}\nBuy: ${calc.to} pack(s)`;
   }).join('\n\n');
 }
 
