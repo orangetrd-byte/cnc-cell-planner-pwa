@@ -32,9 +32,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 header{background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
 .logo{width:38px;height:38px;background:var(--accent);border-radius:9px;display:grid;place-items:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,113,227,.3)}
 .logo svg{width:20px;height:20px}
+.htitles{min-width:0}
 .htitles h1{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.3px}
 .htitles p{font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:1px}
-.hright{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hright{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.hright .btn{white-space:nowrap}
 .live-pill{display:flex;align-items:center;gap:5px;background:var(--green-light);border:1px solid rgba(40,167,69,.2);border-radius:20px;padding:4px 10px}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
@@ -148,7 +150,8 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 @media(max-width:900px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}.sum-grid{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}.app-nav{top:66px}.sline{grid-template-columns:minmax(118px,.42fr) minmax(0,1fr)}}
 @media(min-width:701px) and (max-width:1100px){.stack-table th:first-child,.stack-table td:first-child{position:sticky;left:0;background:var(--surface);z-index:2}.stack-table thead th:first-child{background:var(--surface2);z-index:3}.stack-table th:nth-child(2),.stack-table td:nth-child(2){position:sticky;left:76px;background:var(--surface);z-index:2}.stack-table thead th:nth-child(2){background:var(--surface2);z-index:3}}
 @media(max-width:1100px){.wo-bulk-grid{grid-template-columns:1fr 1fr 1fr}.wo-bulk-grid .btn{width:100%;justify-content:center}}
-@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.hright{gap:5px}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}.wo-search{grid-template-columns:1fr}.release-list{grid-template-columns:1fr}}
+@media(max-width:760px){header{align-items:flex-start;flex-wrap:wrap}.hright{width:100%;margin-left:52px;justify-content:flex-start}.live-pill{margin-left:auto}}
+@media(max-width:600px){body{padding-bottom:70px}header{padding:11px 12px}.htitles h1{font-size:15px}.htitles p{max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hright{gap:5px;margin-left:0}.hright .btn{flex:1;justify-content:center;min-width:78px}.live-pill{display:none}.app-nav{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:300;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:none;background:rgba(255,255,255,.96);box-shadow:0 -2px 12px rgba(0,0,0,.08)}.nav-btn{padding:9px 10px;min-width:82px}.main{padding-bottom:20px}.stat-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr}.wo-bulk-grid{grid-template-columns:1fr}.wo-search{grid-template-columns:1fr}.release-list{grid-template-columns:1fr}}
 @media(max-width:700px){.tbl-wrap{overflow:visible;border:none}.stack-table{border-collapse:separate;border-spacing:0 10px}.stack-table thead{display:none}.stack-table tbody,.stack-table tr,.stack-table td{display:block;width:100%}.stack-table tbody tr{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:9px 10px;margin-bottom:10px}.stack-table tbody tr.ready-row{background:var(--green-light);border-color:rgba(40,167,69,.25)}.stack-table tbody tr.hold-row{background:var(--yellow-light);border-color:rgba(245,158,11,.28)}.stack-table tbody tr.empty-row{box-shadow:none;padding:0}.stack-table tbody tr.empty-row td{display:block;text-align:center}.stack-table tbody td{display:grid;grid-template-columns:94px minmax(0,1fr);gap:9px;align-items:center;border-bottom:1px solid rgba(0,0,0,.05);padding:8px 2px}.stack-table tbody td:last-child{border-bottom:none}.stack-table td::before{content:attr(data-label);display:block;color:var(--text-dim);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.stack-table td input,.stack-table td select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 9px}.stack-table td .cv{font-size:11px;line-height:1.55}.stack-table td .btn{width:100%;justify-content:center}}
 @media(max-width:520px){.sline{grid-template-columns:1fr;gap:2px}.sv{text-align:left}}
 
@@ -404,7 +407,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     <div class="card-body">
       <p class="tip" style="margin-bottom:11px">Usage per part calculates inserts/tools needed. On hand is entered as packs, so order quantity is also packs.</p>
       <div class="tbl-wrap">
-        <table><thead><tr><th>Pocket</th><th>Tool / Insert</th><th>Op</th><th>Type</th><th>Supply</th><th>Pack Size</th><th>Usage/Part</th><th>Total Needed</th><th>On Hand Packs</th><th>To Order Packs</th><th></th></tr></thead>
+        <table class="stack-table"><thead><tr><th>Pocket</th><th>Tool / Insert</th><th>Op</th><th>Type</th><th>Supply</th><th>Pack Size</th><th>Usage/Part</th><th>Total Needed</th><th>On Hand Packs</th><th>To Order Packs</th><th></th></tr></thead>
         <tbody id="toolBody"><tr class="empty-row"><td colspan="11">No tooling — click "+ Add Tool" to begin</td></tr></tbody></table>
       </div>
     </div>
@@ -509,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v32-tooling-share-no-pocket · Updated 2026-06-10 · Cache v32</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v33-planner-polish - Updated 2026-06-10 - Cache v33</div>
     </div>
   </div>
 
@@ -1474,7 +1477,7 @@ function renderToolOpDDs(){
 
 // TOOLS
 function toolOrderCalc(t,tp){
-  const u=parseFloat(t.usage)||0, pk=parseInt(t.unit)||1, oh=parseFloat(t.onhand)||0;
+  const u=Math.max(0,parseFloat(t.usage)||0), pk=Math.max(1,parseInt(t.unit)||1), oh=Math.max(0,parseFloat(t.onhand)||0);
   const tn=tp>0&&u>0?Math.ceil(tp*u):'—';
   const packs=typeof tn==='number'?Math.ceil(tn/pk):'—';
   const inHouse=t.supply==='inhouse'||t.inHouse===true;
@@ -1483,7 +1486,7 @@ function toolOrderCalc(t,tp){
 }
 function addTool(){ toolC++; tools.push({id:toolC,pocket:'',desc:'',op:'',type:'insert',supply:'purchase',unit:'10',usage:'',onhand:''}); renderTools(); recalc(); }
 function removeTool(id){ tools=tools.filter(t=>t.id!==id); renderTools(); recalc(); }
-function toolCh(id,f,v){ const t=tools.find(t=>t.id===id); if(t) t[f]=v; updateToolCalc(id); save(); }
+function toolCh(id,f,v){ const t=tools.find(t=>t.id===id); if(t) t[f]=v; updateToolCalc(id); updateSummary(); save(); }
 function clearTools(){ if(!confirm('Clear all tooling?')) return; tools=[]; toolC=0; renderTools(); recalc(); }
 function updateToolCalc(id){
   const t=tools.find(t=>t.id===id);
@@ -1503,17 +1506,17 @@ function renderTools(){
     const calc=toolOrderCalc(t,tp);
     const cls=typeof calc.to==='number'&&calc.to>0?'cv-alert':'cv';
     return `<tr>
-      <td><input type="text" value="${escHtml(t.pocket)}" placeholder="T01" oninput="toolCh(${t.id},'pocket',this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" style="width:44px"></td>
-      <td><input type="text" value="${escHtml(t.desc)}" placeholder="CNMG 432" oninput="toolCh(${t.id},'desc',this.value)"></td>
-      <td><select class="top-dd" data-tid="${t.id}" onchange="toolCh(${t.id},'op',this.value)"><option value="">—</option>${ops.map(o=>`<option value="${o.num}" ${t.op==o.num?'selected':''}>OP ${o.num}${o.desc?' – '+escHtml(o.desc):''}</option>`).join('')}</select></td>
-      <td><select onchange="toolCh(${t.id},'type',this.value)"><option value="insert" ${t.type==='insert'?'selected':''}>Insert</option><option value="drill" ${t.type==='drill'?'selected':''}>Drill</option><option value="end-mill" ${t.type==='end-mill'?'selected':''}>End Mill</option><option value="tap" ${t.type==='tap'?'selected':''}>Tap</option><option value="other" ${t.type==='other'?'selected':''}>Other</option></select></td>
-      <td><select onchange="toolCh(${t.id},'supply',this.value)"><option value="purchase" ${calc.inHouse?'':'selected'}>Purchase</option><option value="inhouse" ${calc.inHouse?'selected':''}>In-house</option></select></td>
-      <td><input type="number" value="${escHtml(t.unit)}" placeholder="10" min="1" oninput="toolCh(${t.id},'unit',this.value)" style="width:55px"></td>
-      <td><input type="number" value="${escHtml(t.usage)}" placeholder="0.05" min="0" step="0.001" oninput="toolCh(${t.id},'usage',this.value)" style="width:65px"></td>
-      <td><span class="cv" data-tool-need="${t.id}">${calc.tn}</span></td>
-      <td><input type="number" value="${escHtml(t.onhand)}" placeholder="0" min="0" oninput="toolCh(${t.id},'onhand',this.value)" style="width:60px"></td>
-      <td><span class="${cls}" data-tool-order="${t.id}">${calc.inHouse?'In-house':calc.to}</span></td>
-      <td><button class="btn btn-red btn-sm" onclick="removeTool(${t.id})">✕</button></td>
+      <td data-label="Pocket"><input type="text" value="${escHtml(t.pocket)}" placeholder="T01" oninput="toolCh(${t.id},'pocket',this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" style="width:44px"></td>
+      <td data-label="Tool / Insert"><input type="text" value="${escHtml(t.desc)}" placeholder="CNMG 432" oninput="toolCh(${t.id},'desc',this.value)"></td>
+      <td data-label="Op"><select class="top-dd" data-tid="${t.id}" onchange="toolCh(${t.id},'op',this.value)"><option value="">—</option>${ops.map(o=>`<option value="${o.num}" ${t.op==o.num?'selected':''}>OP ${o.num}${o.desc?' – '+escHtml(o.desc):''}</option>`).join('')}</select></td>
+      <td data-label="Type"><select onchange="toolCh(${t.id},'type',this.value)"><option value="insert" ${t.type==='insert'?'selected':''}>Insert</option><option value="drill" ${t.type==='drill'?'selected':''}>Drill</option><option value="end-mill" ${t.type==='end-mill'?'selected':''}>End Mill</option><option value="tap" ${t.type==='tap'?'selected':''}>Tap</option><option value="other" ${t.type==='other'?'selected':''}>Other</option></select></td>
+      <td data-label="Supply"><select onchange="toolCh(${t.id},'supply',this.value)"><option value="purchase" ${calc.inHouse?'':'selected'}>Purchase</option><option value="inhouse" ${calc.inHouse?'selected':''}>In-house</option></select></td>
+      <td data-label="Pack Size"><input type="number" value="${escHtml(t.unit)}" placeholder="10" min="1" oninput="toolCh(${t.id},'unit',this.value)" style="width:55px"></td>
+      <td data-label="Usage/Part"><input type="number" value="${escHtml(t.usage)}" placeholder="0.05" min="0" step="0.001" oninput="toolCh(${t.id},'usage',this.value)" style="width:65px"></td>
+      <td data-label="Total Needed"><span class="cv" data-tool-need="${t.id}">${calc.tn}</span></td>
+      <td data-label="On Hand Packs"><input type="number" value="${escHtml(t.onhand)}" placeholder="0" min="0" oninput="toolCh(${t.id},'onhand',this.value)" style="width:60px"></td>
+      <td data-label="To Order Packs"><span class="${cls}" data-tool-order="${t.id}">${calc.inHouse?'In-house':calc.to}</span></td>
+      <td data-label="Remove"><button class="btn btn-red btn-sm" onclick="removeTool(${t.id})">✕</button></td>
     </tr>`;
   }).join('');
 }
