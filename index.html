@@ -509,7 +509,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v28-tooling-export-units · Updated 2026-06-10 · Cache v28</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v29-readable-tooling-share · Updated 2026-06-10 · Cache v29</div>
     </div>
   </div>
 
@@ -1785,14 +1785,18 @@ function buildText(){
   const jn=document.getElementById('jobNum').value||'N/A';
   const tp=parseInt(document.getElementById('totalParts').value)||0;
   const summary=toolingOrderSummary(tp);
-  let out=`CNC Cell Planner — Tooling Order List\n${'='.repeat(40)}\nPart: ${pn}  |  Job: ${jn}  |  Qty: ${tp}\nUnits: Need = individual inserts/tools. Pack Size = pieces per pack. On Hand = packs. Order = packs to buy.\n${'='.repeat(40)}\n\n`;
+  let out=`CNC Cell Planner\nTooling Order List\n\nPart: ${pn}\nJob: ${jn}\nQty: ${tp}\n\nUnits:\nNeed = individual inserts/tools\nPack = pieces per pack\nOn hand = packs\nOrder = packs to buy\n\n`;
   if(!tools.length) return out+'No tooling entries.';
   tools.forEach(t=>{
     const calc=toolOrderCalc(t,tp);
     const orderText=calc.inHouse?'IN-HOUSE':(calc.to>0?calc.to+' packs':'OK');
-    out+=`${t.pocket||'—'} | ${t.desc||'—'} | OP ${t.op||'—'} | ${t.type} | ${calc.inHouse?'In-house':'Purchase'} | Pack Size:${calc.pk} | Use:${calc.u}/part | Need:${calc.tn==='—'?0:calc.tn} pcs | On Hand:${calc.oh} pack(s) | ORDER:${orderText}\n`;
+    out+=`${t.pocket||'—'} - ${t.desc||'—'}\n`;
+    out+=`OP: ${t.op||'—'} | Type: ${t.type} | Supply: ${calc.inHouse?'In-house':'Purchase'}\n`;
+    out+=`Use: ${calc.u}/part | Need: ${calc.tn==='—'?0:calc.tn} pcs\n`;
+    out+=`Pack: ${calc.pk} | On hand: ${calc.oh} pack(s)\n`;
+    out+=`ORDER: ${orderText}\n\n`;
   });
-  out+=`\nSummary\n${'='.repeat(40)}\nPurchase packs to order: ${summary.purchasePacks}\nIn-house lines, do not order: ${summary.inHouseLines}\nPurchase lines already covered: ${summary.okLines}\n\nGenerated: ${new Date().toLocaleString()}`;
+  out+=`Summary\nPurchase packs to order: ${summary.purchasePacks}\nIn-house lines, do not order: ${summary.inHouseLines}\nPurchase lines already covered: ${summary.okLines}\n\nGenerated: ${new Date().toLocaleString()}`;
   return out;
 }
 
