@@ -402,9 +402,9 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
       </div>
     </div>
     <div class="card-body">
-      <p class="tip" style="margin-bottom:11px">Usage per part auto-calculates total needed and packs to order.</p>
+      <p class="tip" style="margin-bottom:11px">Usage per part calculates inserts/tools needed. On hand is entered as packs, so order quantity is also packs.</p>
       <div class="tbl-wrap">
-        <table><thead><tr><th>Pocket</th><th>Tool / Insert</th><th>Op</th><th>Type</th><th>Supply</th><th>Pack Size</th><th>Usage/Part</th><th>Total Needed</th><th>On Hand</th><th>To Order</th><th></th></tr></thead>
+        <table><thead><tr><th>Pocket</th><th>Tool / Insert</th><th>Op</th><th>Type</th><th>Supply</th><th>Pack Size</th><th>Usage/Part</th><th>Total Needed</th><th>On Hand Packs</th><th>To Order Packs</th><th></th></tr></thead>
         <tbody id="toolBody"><tr class="empty-row"><td colspan="11">No tooling — click "+ Add Tool" to begin</td></tr></tbody></table>
       </div>
     </div>
@@ -509,7 +509,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v27-inspection-advance-refresh · Updated 2026-06-10 · Cache v27</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v28-tooling-export-units · Updated 2026-06-10 · Cache v28</div>
     </div>
   </div>
 
@@ -1747,14 +1747,32 @@ function clearQuery(){
 }
 
 // EXPORT / SHARE
+function toolingOrderSummary(tp){
+  let purchasePacks=0,inHouseLines=0,purchaseLines=0,okLines=0;
+  tools.forEach(t=>{
+    const calc=toolOrderCalc(t,tp);
+    if(calc.inHouse){ inHouseLines++; return; }
+    purchaseLines++;
+    if(typeof calc.to==='number'&&calc.to>0) purchasePacks+=calc.to;
+    else okLines++;
+  });
+  return {purchasePacks,inHouseLines,purchaseLines,okLines};
+}
 function exportCSV(){
   const tp=parseInt(document.getElementById('totalParts').value)||0;
   const pn=document.getElementById('partNum').value||'job';
-  const rows=[['Pocket','Description','Op','Type','Supply','Pack Size','Usage/Part','Total Needed','On Hand','To Order']];
+  const rows=[['Pocket','Description','Op','Type','Supply','Pack Size','Usage/Part','Total Needed','On Hand Packs','To Order Packs','Order Status']];
   tools.forEach(t=>{
     const calc=toolOrderCalc(t,tp);
-    rows.push([t.pocket,t.desc,t.op?'OP '+t.op:'',t.type,calc.inHouse?'In-house':'Purchase',calc.pk,calc.u,calc.tn==='—'?'':calc.tn,calc.oh,calc.inHouse?'In-house':calc.to]);
+    const orderPacks=calc.inHouse?'':calc.to;
+    const orderStatus=calc.inHouse?'IN-HOUSE':(calc.to>0?'ORDER':'OK');
+    rows.push([t.pocket,t.desc,t.op?'OP '+t.op:'',t.type,calc.inHouse?'In-house':'Purchase',calc.pk,calc.u,calc.tn==='—'?'':calc.tn,calc.oh,orderPacks,orderStatus]);
   });
+  const summary=toolingOrderSummary(tp);
+  rows.push([]);
+  rows.push(['Summary','','','','','','','','',summary.purchasePacks,'Total purchase packs to order']);
+  rows.push(['Summary','','','','','','','','',summary.inHouseLines,'In-house line(s), do not order']);
+  rows.push(['Summary','','','','','','','','',summary.okLines,'Purchase line(s) already covered']);
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
@@ -1766,14 +1784,15 @@ function buildText(){
   const pn=document.getElementById('partNum').value||'N/A';
   const jn=document.getElementById('jobNum').value||'N/A';
   const tp=parseInt(document.getElementById('totalParts').value)||0;
-  let out=`CNC Cell Planner — Tooling Order List\n${'='.repeat(40)}\nPart: ${pn}  |  Job: ${jn}  |  Qty: ${tp}\n${'='.repeat(40)}\n\n`;
+  const summary=toolingOrderSummary(tp);
+  let out=`CNC Cell Planner — Tooling Order List\n${'='.repeat(40)}\nPart: ${pn}  |  Job: ${jn}  |  Qty: ${tp}\nUnits: Need = individual inserts/tools. Pack Size = pieces per pack. On Hand = packs. Order = packs to buy.\n${'='.repeat(40)}\n\n`;
   if(!tools.length) return out+'No tooling entries.';
   tools.forEach(t=>{
     const calc=toolOrderCalc(t,tp);
     const orderText=calc.inHouse?'IN-HOUSE':(calc.to>0?calc.to+' packs':'OK');
-    out+=`${t.pocket||'—'} | ${t.desc||'—'} | OP ${t.op||'—'} | ${t.type} | ${calc.inHouse?'In-house':'Purchase'} | Pack:${calc.pk} | Use:${calc.u}/part | Need:${calc.tn==='—'?0:calc.tn} | OnHand:${calc.oh} | ORDER:${orderText}\n`;
+    out+=`${t.pocket||'—'} | ${t.desc||'—'} | OP ${t.op||'—'} | ${t.type} | ${calc.inHouse?'In-house':'Purchase'} | Pack Size:${calc.pk} | Use:${calc.u}/part | Need:${calc.tn==='—'?0:calc.tn} pcs | On Hand:${calc.oh} pack(s) | ORDER:${orderText}\n`;
   });
-  out+=`\nGenerated: ${new Date().toLocaleString()}`;
+  out+=`\nSummary\n${'='.repeat(40)}\nPurchase packs to order: ${summary.purchasePacks}\nIn-house lines, do not order: ${summary.inHouseLines}\nPurchase lines already covered: ${summary.okLines}\n\nGenerated: ${new Date().toLocaleString()}`;
   return out;
 }
 
