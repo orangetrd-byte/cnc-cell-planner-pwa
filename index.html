@@ -509,7 +509,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v30-simple-tooling-order-list · Updated 2026-06-10 · Cache v30</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">Version v31-minimal-tooling-share · Updated 2026-06-10 · Cache v31</div>
     </div>
   </div>
 
@@ -1781,28 +1781,17 @@ function exportCSV(){
 }
 
 function buildText(){
-  const pn=document.getElementById('partNum').value||'N/A';
-  const jn=document.getElementById('jobNum').value||'N/A';
   const tp=parseInt(document.getElementById('totalParts').value)||0;
-  const summary=toolingOrderSummary(tp);
   const orderTools=tools.filter(t=>{
     const calc=toolOrderCalc(t,tp);
     return !calc.inHouse&&typeof calc.to==='number'&&calc.to>0;
   });
-  let out=`CNC Cell Planner\nBuy These Tool Packs\n\nPart: ${pn}\nJob: ${jn}\nParts to make: ${tp}\n\nPlain English:\nNeed = how many inserts/tools the job will use.\nHave = packs already on hand.\nBuy = packs to order.\n\n`;
-  if(!tools.length) return out+'No tooling entered.';
-  if(!orderTools.length) return out+`Nothing to buy.\n\nNot shown: ${summary.inHouseLines} in-house line(s), ${summary.okLines} already-covered purchase line(s).\n\nGenerated: ${new Date().toLocaleString()}`;
-  orderTools.forEach(t=>{
+  if(!tools.length) return 'No tooling entered.';
+  if(!orderTools.length) return 'Nothing to buy.';
+  return orderTools.map(t=>{
     const calc=toolOrderCalc(t,tp);
-    out+=`${t.pocket||'—'} - ${t.desc||'—'}\n`;
-    out+=`Operation: OP ${t.op||'—'}\n`;
-    out+=`Buy: ${calc.to} pack(s)\n`;
-    out+=`Need: ${calc.tn==='—'?0:calc.tn} piece(s)\n`;
-    out+=`Have: ${calc.oh} pack(s)\n`;
-    out+=`Pack size: ${calc.pk} piece(s) per pack\n\n`;
-  });
-  out+=`Summary\nBuy total: ${summary.purchasePacks} pack(s)\nNot shown: ${summary.inHouseLines} in-house line(s), ${summary.okLines} already-covered purchase line(s).\n\nGenerated: ${new Date().toLocaleString()}`;
-  return out;
+    return `${t.pocket||'—'} - ${t.desc||'—'}\nOperation: OP ${t.op||'—'}\nBuy: ${calc.to} pack(s)`;
+  }).join('\n\n');
 }
 
 async function shareTools(){
