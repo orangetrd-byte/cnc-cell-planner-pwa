@@ -512,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v34-mgp-build-info | Build 2026.06.12.01 | Cache v34</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v35-assistant-readiness-context | Build 2026.06.12.02 | Cache v35</div>
     </div>
   </div>
 
@@ -1169,6 +1169,53 @@ function completedOperationStats(){
     ? route.map(op=>`OP ${op}: ${byOp[op]||0}`).join(' · ')
     : '—';
   return {total,possible,byOpText};
+}
+function travelerReadinessStats(){
+  const route=routeOps().map(o=>String(o.num));
+  const currentByOp={Complete:{count:0,qty:0}};
+  const readyByTarget={};
+  const blockedByStatus={};
+  route.forEach(op=>{
+    currentByOp['OP '+op]={count:0,qty:0};
+    readyByTarget['OP '+op]={count:0,qty:0};
+  });
+  readyByTarget.Complete={count:0,qty:0};
+  workOrders.forEach(raw=>{
+    const w=normalizeWO(raw);
+    const qty=Math.max(0,parseInt(w.qty)||0);
+    if(w.status==='Complete'||w.currentOp==='COMPLETE'){
+      currentByOp.Complete.count++;
+      currentByOp.Complete.qty+=qty;
+      return;
+    }
+    const curKey=w.currentOp?'OP '+w.currentOp:'No route';
+    if(!currentByOp[curKey]) currentByOp[curKey]={count:0,qty:0};
+    currentByOp[curKey].count++;
+    currentByOp[curKey].qty+=qty;
+    if(woCanAdvance(w)){
+      const next=nextRouteOp(w.currentOp);
+      const targetKey=next==='COMPLETE'?'Complete':'OP '+next;
+      if(!readyByTarget[targetKey]) readyByTarget[targetKey]={count:0,qty:0};
+      const releasedQty=woCurrentDone(w)>0?Math.min(qty,woCurrentDone(w)):qty;
+      readyByTarget[targetKey].count++;
+      readyByTarget[targetKey].qty+=releasedQty;
+    }else if(woBlocksAdvance(w)){
+      const status=w.status||'Not Started';
+      if(!blockedByStatus[status]) blockedByStatus[status]={count:0,qty:0};
+      blockedByStatus[status].count++;
+      blockedByStatus[status].qty+=qty;
+    }
+  });
+  const fmt=entry=>`${entry.count} traveler(s), ${entry.qty} pcs`;
+  const currentText=Object.entries(currentByOp)
+    .filter(([,v])=>v.count||v.qty)
+    .map(([k,v])=>`${k}: ${fmt(v)}`).join(' · ')||'None';
+  const readyText=Object.entries(readyByTarget)
+    .filter(([k])=>k!=='OP '+route[0])
+    .map(([k,v])=>`${k}: ${fmt(v)}`).join(' · ')||'None';
+  const blockedText=Object.entries(blockedByStatus)
+    .map(([k,v])=>`${k}: ${fmt(v)}`).join(' · ')||'None';
+  return {currentByOp,readyByTarget,blockedByStatus,currentText,readyText,blockedText};
 }
 function travelerFlowText(w){
   const cur=w.currentOp==='COMPLETE'?'COMPLETE':(w.currentOp?'OP '+w.currentOp:'No route');
@@ -1899,8 +1946,12 @@ function getJobContext(){
   }).join('; '):'None defined';
   const woText=workOrders.length?workOrders.map(raw=>{
     const w=normalizeWO(raw);
-    return `${w.num||'unnumbered'} batch ${w.batch||'Unbatched'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done ${completedOpsText(w)}`;
+    const doneAtOp=woCurrentDone(w);
+    const move=w.currentOp==='COMPLETE'?0:opMoveQty(w.currentOp);
+    const next=w.currentOp==='COMPLETE'?'COMPLETE':nextRouteOp(w.currentOp);
+    return `${w.num||'unnumbered'} batch ${w.batch||'Unbatched'} qty ${parseInt(w.qty)||0} current ${w.currentOp==='COMPLETE'?'COMPLETE':'OP '+w.currentOp} status ${w.status||'Not Started'} done_at_current_op ${doneAtOp}/${move} next ${next==='COMPLETE'?'COMPLETE':'OP '+next} ready_to_advance ${woCanAdvance(w)} completed_history ${completedOpsText(w)}`;
   }).join('; '):'None defined';
+  const travelerStats=travelerReadinessStats();
   const batchSummary=workOrderBatchSummary();
   const toolsText=tools.length?tools.map(t=>{
     const calc=toolOrderCalc(t,tp);
@@ -1931,6 +1982,9 @@ Cycle Time Needed: ${cyc}
 Remaining Operation Hours: ${totalHrs}
 Bottleneck Hours: ${bnHrs}
 Work Orders / Travelers: ${woText}
+Current Travelers by Op: ${travelerStats.currentText}
+Ready to Advance by Target Op: ${travelerStats.readyText}
+Blocked / Waiting Travelers by Status: ${travelerStats.blockedText}
 Traveler Batches: ${batchSummary.text||'None defined'}
 Total WO Quantity: ${workOrderQty()}
 Progress As Of: ${asOf}
@@ -1942,6 +1996,7 @@ Operations: ${opsText}
 Tooling: ${toolsText}
 
 Answer the user's question concisely and practically, like a knowledgeable shop foreman would. Use numbers from the job data above when relevant.
+If asked "ready for OP X", use "Ready to Advance by Target Op", not completed operation history. Completed history only means the traveler has already finished that operation at some point.
 Format for a phone screen: short sections, short bullet lines, no tables. Use plain text; avoid Markdown unless a brief heading or bullet list improves scanability.`;
 }
 function formatAIMessage(text,type){
