@@ -512,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v35-assistant-readiness-context | Build 2026.06.12.02 | Cache v35</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v36-local-assistant-status | Build 2026.06.13.01 | Cache v36</div>
     </div>
   </div>
 
@@ -1216,6 +1216,46 @@ function travelerReadinessStats(){
   const blockedText=Object.entries(blockedByStatus)
     .map(([k,v])=>`${k}: ${fmt(v)}`).join(' · ')||'None';
   return {currentByOp,readyByTarget,blockedByStatus,currentText,readyText,blockedText};
+}
+function localAssistantOpStatusAnswer(q){
+  const text=String(q||'').toLowerCase();
+  const opMatch=text.match(/\bop\s*#?\s*(\d+)\b/);
+  if(!opMatch) return '';
+  const asksStatus=/\b(status|ready|how many|where|count|parts?|travelers?|waiting|held|advance|next)\b/.test(text);
+  if(!asksStatus) return '';
+  const target=String(opMatch[1]);
+  const targetKey='OP '+target;
+  const stats=travelerReadinessStats();
+  const current=stats.currentByOp[targetKey]||{count:0,qty:0};
+  const ready=stats.readyByTarget[targetKey]||{count:0,qty:0};
+  const route=routeOps().map(o=>String(o.num));
+  const idx=route.indexOf(target);
+  let upstream=null;
+  if(idx>0){
+    const prev=route[idx-1];
+    upstream={op:prev,count:0,qty:0,waiting:0,waitingQty:0};
+    workOrders.forEach(raw=>{
+      const w=normalizeWO(raw);
+      if(String(w.currentOp)!==prev) return;
+      const qty=Math.max(0,parseInt(w.qty)||0);
+      upstream.count++;
+      upstream.qty+=qty;
+      if(!woCanAdvance(w)){
+        upstream.waiting++;
+        upstream.waitingQty+=qty;
+      }
+    });
+  }
+  const lines=[
+    `OP ${target} status:`,
+    `- Currently at OP ${target}: ${current.count} traveler(s), ${current.qty} pcs`,
+    `- Ready to move into OP ${target}: ${ready.count} traveler(s), ${ready.qty} pcs`
+  ];
+  if(upstream){
+    lines.push(`- Waiting at OP ${upstream.op}: ${upstream.waiting} traveler(s), ${upstream.waitingQty} pcs`);
+  }
+  if(ready.qty===0) lines.push(`Nothing is released for OP ${target} yet.`);
+  return lines.join('\n');
 }
 function travelerFlowText(w){
   const cur=w.currentOp==='COMPLETE'?'COMPLETE':(w.currentOp?'OP '+w.currentOp:'No route');
@@ -2168,8 +2208,6 @@ async function askAI(){
   if(aiBusy) return;
   const now=Date.now();
   if(now-aiLastAskAt<1500) return;
-  const plan=getAIPlan();
-  if(!plan.length){ alert('Set at least one Assistant API key first — tap ⚙ API Key.'); return; }
   const input=document.getElementById('ai-input');
   const btn=document.getElementById('ask-btn');
   const q=input.value.trim();
@@ -2181,6 +2219,26 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
+  const localAnswer=localAssistantOpStatusAnswer(q);
+  if(localAnswer){
+    addMsg(localAnswer,'bot');
+    aiBusy=false;
+    btn.disabled=false;
+    btn.textContent='Ask';
+    input.disabled=false;
+    input.focus();
+    return;
+  }
+  const plan=getAIPlan();
+  if(!plan.length){
+    alert('Set at least one Assistant API key first - tap API Key.');
+    aiBusy=false;
+    btn.disabled=false;
+    btn.textContent='Ask';
+    input.disabled=false;
+    input.focus();
+    return;
+  }
   const thinking=addMsg('Thinking...','thinking');
   try{
     const prompt=getJobContext();
@@ -2200,7 +2258,7 @@ async function askAI(){
     addMsg(result.text,'bot');
   }catch(e){
     thinking.remove();
-    addMsg('Network error — check your connection, API key, or whether this provider requires a server proxy for browser use.','err');
+    addMsg('Network error - check your connection, API key, or whether this provider requires a server proxy for browser use.','err');
   }finally{
     aiBusy=false;
     btn.disabled=false;
