@@ -112,3 +112,19 @@ Future phases:
 Build the scheduling engine first.
 
 Visual charts come later. The priority is accurate shop-floor flow modeling: travelers, move quantities, operation release, machine constraints, and bottlenecks.
+## Assistant Change Guidelines
+
+Before making code or file changes in this repo:
+
+1. Clarify the planner goal, constraints, assumptions, and measurable success criteria.
+2. Use structured output for plans, reports, risks, assistant behavior, and workflow changes.
+3. Compare options before changing production flow, scheduling logic, reports, storage, dependencies, or AI behavior.
+4. Keep brainstorming limited to planner UI, workflow, and reporting ideas; do not use it to bypass production logic review.
+5. Give technical explanations when changing calculations, scheduling, reports, offline behavior, or assistant fallback paths.
+6. Draft concise documentation or handoff notes for user-facing workflow changes.
+7. Use a troubleshooting checklist before fixing bugs in travelers, operations, move quantities, reports, storage, or PWA behavior.
+8. Add learning-path style content only when it explains planner usage; keep training apps separate.
+9. Assess risks before adding automation, AI fallback, scheduling logic, data migrations, or generated outputs.
+10. Optimize only for a named goal such as reliability, readability, speed, offline use, or production clarity.
+
+Permanent rule: MGP must remain visible in build/version information and cannot be removed, hidden, renamed, or replaced.
