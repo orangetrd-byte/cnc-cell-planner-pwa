@@ -512,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v37-local-assistant-time | Build 2026.06.13.02 | Cache v37</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v38-offline-assistant-help | Build 2026.06.13.03 | Cache v38</div>
     </div>
   </div>
 
@@ -1284,6 +1284,81 @@ function localAssistantOpTimeAnswer(q){
   lines.push(`- Load: ${cap.days.toFixed(1)} working day(s)`);
   lines.push(`State: ${opStateLabel(op)}`);
   return lines.join('\n');
+}
+function localAssistantHelpAnswer(q){
+  const text=String(q||'').toLowerCase();
+  const wantsDefinition=/\b(what is|what's|what are|explain|how do|how does|how to|help|setup|use|work|works|info|version|build)\b/.test(text);
+  if(!wantsDefinition) return '';
+  const topic=(patterns)=>patterns.some(p=>p.test(text));
+  const answer=(title,lines)=>[`Local planner help: ${title}`,...lines.map(line=>`- ${line}`)].join('\n');
+  if(topic([/\btraveler\b/,/\btravelers\b/,/\bwork\s*order\b/,/\bwo\b/])){
+    return answer('Travelers / Work Orders',[
+      'A traveler is one work order moving through the operation route.',
+      'It tracks WO number, batch/part, quantity, current operation, status, done quantity, and completed operations.',
+      'Use travelers to see where each batch is now and what can move next.'
+    ]);
+  }
+  if(topic([/\bmove\s*qty\b/,/\bmove\s*quantity\b/,/\brelease\b/,/\bready\b/])){
+    return answer('Move Qty',[
+      'Move Qty is the minimum good pieces needed at the current operation before the next operation is released.',
+      'Example: OP40 Move Qty 10 means OP50 is not ready until 10 pieces are done at OP40.',
+      'Enter Done @ Op on the traveler; the Advance button unlocks when the move quantity is met.'
+    ]);
+  }
+  if(topic([/\breport\b/,/\breports\b/,/\bcompleted\s*operation\b/,/\bcompleted\s*ops\b/,/\boperation\s*report\b/])){
+    return answer('Reports',[
+      'Reports summarize schedule, production load, completed operation steps, work orders, tooling, and machine hours.',
+      'Completed by Op shows how many travelers have finished each operation.',
+      'Use Reports when you need the job summary, bottleneck hours, or proof of what operations are complete.'
+    ]);
+  }
+  if(topic([/\boperation\b/,/\brouting\b/,/\broute\b/,/\bop\b/])){
+    return answer('Operations / Routing',[
+      'Operations define the route, such as OP10 -> OP20 -> OP30 -> COMPLETE.',
+      'Each operation can have cycle time, setup time, breakdown time, machine, move quantity, state, and shift coverage.',
+      'Traveler flow follows the sorted operation list.'
+    ]);
+  }
+  if(topic([/\bmachine\s*queue\b/,/\bqueue\b/,/\bdispatch\b/,/\bwhat should i run\b/])){
+    return answer('Dispatch / Machine Queue',[
+      'Use traveler status and Ready counts to decide what can run next.',
+      'Ready means the previous operation has met its move quantity and the traveler can advance.',
+      'Machine queue work belongs in this planner because it is production flow and scheduling.'
+    ]);
+  }
+  if(topic([/\bin[\s-]*house\b/,/\btooling\b/,/\binserts?\b/,/\border\s*list\b/])){
+    return answer('In-house Tooling',[
+      'In-house tooling means the line is tracked but not purchased.',
+      'Purchase tooling with shortages appears on the order list.',
+      'In-house inserts are intentionally excluded from the buy list.'
+    ]);
+  }
+  if(topic([/\boffline\b/,/\bpwa\b/,/\binstall\b/,/\bcache\b/,/\bgithub\s*pages\b/])){
+    return answer('Offline / PWA',[
+      'The app stores job data in this browser using localStorage.',
+      'After the PWA installs and caches, it can open offline.',
+      'After updates, close and reopen the PWA or clear site data if the old cache is still showing.'
+    ]);
+  }
+  if(topic([/\bimport\b/,/\bexport\b/,/\bbackup\b/,/\brestore\b/,/\bjson\b/])){
+    return answer('Import / Export',[
+      'Export saves the current planner data to a JSON backup.',
+      'Import restores a saved JSON backup into this browser.',
+      'Export before major changes, testing, or reset.'
+    ]);
+  }
+  if(topic([/\bassistant\b/,/\bapi\s*key\b/,/\bai\b/,/\bgemini\b/,/\bgroq\b/,/\bgrok\b/,/\bclaude\b/,/\bopenai\b/])){
+    return answer('Assistant Setup',[
+      'Local planner help works without an API key.',
+      'Remote AI fallback needs a saved provider key under API Key.',
+      'Use API keys only for open-ended questions that local planner logic cannot answer.'
+    ]);
+  }
+  if(topic([/\bversion\b/,/\bbuild\b/,/\bmgp\b/])){
+    const version=document.getElementById('app-version-info')?.textContent||'Version info is not available.';
+    return answer('Build Info',[version]);
+  }
+  return '';
 }
 function travelerFlowText(w){
   const cur=w.currentOp==='COMPLETE'?'COMPLETE':(w.currentOp?'OP '+w.currentOp:'No route');
@@ -2247,7 +2322,7 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
-  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q);
+  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantHelpAnswer(q);
   if(localAnswer){
     addMsg(localAnswer,'bot');
     aiBusy=false;
@@ -2259,7 +2334,7 @@ async function askAI(){
   }
   const plan=getAIPlan();
   if(!plan.length){
-    alert('Set at least one Assistant API key first - tap API Key.');
+    addMsg('AI fallback needs an API key.\n- Local planner help is available offline.\n- For open-ended AI questions, tap API Key and save a provider key first.','err');
     aiBusy=false;
     btn.disabled=false;
     btn.textContent='Ask';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v37-local-assistant-time';
+const CACHE_NAME = 'cnc-cell-planner-v38-offline-assistant-help';
 const APP_SHELL = [
   './',
   './index.html',
