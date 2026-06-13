@@ -15,3 +15,8 @@ Phase 1: Shop-Flow Stability
 - Verify remote and local stay aligned after every planner update.
 - Review assistant readiness and production context after each UI change.
 - Improve dispatch/report workflows before adding heavier scheduling visuals.
+## Permanent Version Rule
+
+- Every version/build update must keep the letters MGP visible in the app's build or version information.
+- MGP cannot be removed, hidden, renamed, or replaced during future updates.
+- If version text is redesigned, MGP must move with the version/build information.
