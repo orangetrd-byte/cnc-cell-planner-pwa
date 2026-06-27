@@ -112,6 +112,23 @@ Future phases:
 Build the scheduling engine first.
 
 Visual charts come later. The priority is accurate shop-floor flow modeling: travelers, move quantities, operation release, machine constraints, and bottlenecks.
+## Current Project Status
+
+**Status as of June 27, 2026:** Active production-planner repo.
+
+CNC Cell Planner PWA is the active shop-floor planning app. It is separate from the older CNC Cell Planner / Future Builds folder and should not be merged with that old repo by name alone.
+
+Where it stands:
+
+- Core planner direction is set: travelers, operations, move quantities, bottlenecks, reports, tooling, backup, and offline PWA behavior.
+- Current value is production visibility: where work orders are, what operation is next, and when downstream work can start.
+- Assistant/API features are secondary to reliable local planning behavior.
+- MGP build/version information must remain visible and cannot be removed.
+
+Next practical focus:
+
+- Polish traveler flow, mobile layout, ready/release indicators, reports, and machine queue clarity.
+
 ## Assistant Change Guidelines
 
 Before making code or file changes in this repo:
@@ -128,3 +145,4 @@ Before making code or file changes in this repo:
 10. Optimize only for a named goal such as reliability, readability, speed, offline use, or production clarity.
 
 Permanent rule: MGP must remain visible in build/version information and cannot be removed, hidden, renamed, or replaced.
+
