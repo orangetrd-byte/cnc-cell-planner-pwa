@@ -2180,7 +2180,7 @@ function getAIPlan(){
   const mode=localStorage.getItem('ai-mode')||'auto';
   const add=(list,profile)=>profile.forEach(p=>{ if(!list.some(x=>x.provider===p.provider&&x.model===p.model&&x.reasoning===p.reasoning)) list.push(p); });
   const plan=[];
-  const providerOrder=['gemini','openai','anthropic','grok','groq'];
+  const providerOrder=['groq','openai','anthropic','gemini','grok'];
   providerOrder.forEach(id=>{
     const profile=AI_PROFILES[id];
     if(!profile||!localStorage.getItem(profile.keyId)) return;
@@ -2195,7 +2195,7 @@ function getAIPlan(){
 function isQuotaError(data,status){
   const msg=(data?.error?.message||data?.message||'').toLowerCase();
   const code=(data?.error?.status||data?.error?.code||status||'').toString().toLowerCase();
-  return status===429||code.includes('resource_exhausted')||code.includes('rate')||msg.includes('quota')||msg.includes('rate')||msg.includes('limit');
+  return status===429||code.includes('resource_exhausted')||code.includes('rate')||msg.includes('quota')||msg.includes('rate')||msg.includes('limit')||msg.includes('high demand')||msg.includes('try again later')||msg.includes('temporary');
 }
 async function callGemini(profile,prompt){
   const key=localStorage.getItem('gemini-key');
