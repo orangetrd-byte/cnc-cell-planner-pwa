@@ -512,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v40-assistant-local-status | Build 2026.06.30.02 | Cache v40</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v41-local-risk-answer | Build 2026.06.30.03 | Cache v41</div>
     </div>
   </div>
 
@@ -1312,6 +1312,38 @@ function localAssistantJobStatusAnswer(q){
     if(forecast.margin!==null) lines.push(`- Deadline margin: ${forecast.margin} working day(s)`);
   }
   if(!workOrders.length) lines.push('- No travelers entered yet.');
+  return lines.join('\n');
+}
+function localAssistantScheduleRiskAnswer(q){
+  const text=String(q||'').toLowerCase();
+  const wantsRisk=/\b(risk|biggest risk|schedule risk|bottleneck|late|behind|problem|concern|plain english)\b/.test(text);
+  if(!wantsRisk) return '';
+  const parts=parseInt(document.getElementById('totalParts')?.value)||workOrderQty()||0;
+  if(!parts) return 'Local planner risk:\n- No part quantity or travelers are entered yet, so schedule risk cannot be calculated.';
+  const stats=operationHourStats(parts);
+  const forecast=timeFrameForecast(parts,stats);
+  const travelerStats=travelerReadinessStats();
+  const completed=completedOperationStats();
+  const lines=['Local planner risk:'];
+  if(stats?.bottleneckOp){
+    const op=stats.bottleneckOp;
+    lines.push(`- Biggest risk: OP ${op.num} is the bottleneck at ${stats.bottleneck.toFixed(1)} hr.`);
+    lines.push(`- Plain English: this operation controls the schedule. If OP ${op.num} slips, the whole job slips.`);
+    lines.push(`- Machine: ${(op.machine||'Unassigned').trim()||'Unassigned'}.`);
+  }else{
+    lines.push('- Biggest risk: operation times are incomplete, so the bottleneck cannot be identified yet.');
+  }
+  if(forecast?.projectedFinish){
+    lines.push(`- Projected finish: ${forecast.projectedFinish}.`);
+    if(forecast.margin!==null){
+      lines.push(forecast.margin>=0
+        ? `- Deadline margin: ${forecast.margin} working day(s) available.`
+        : `- Deadline risk: ${Math.abs(forecast.margin)} working day(s) late at current load.`);
+    }
+  }
+  lines.push(`- Current WIP: ${travelerStats.currentText}.`);
+  lines.push(`- Ready to advance: ${travelerStats.readyText}.`);
+  lines.push(`- Completed op steps: ${completed.total}/${completed.possible}.`);
   return lines.join('\n');
 }
 function localAssistantHelpAnswer(q){
@@ -2351,7 +2383,7 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
-  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantHelpAnswer(q);
+  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantHelpAnswer(q);
   if(localAnswer){
     addMsg(localAnswer,'bot');
     aiBusy=false;
