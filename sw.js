@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v39-assistant-fallback-cache';
+const CACHE_NAME = 'cnc-cell-planner-v40-assistant-local-status';
 const APP_SHELL = [
   './',
   './index.html',

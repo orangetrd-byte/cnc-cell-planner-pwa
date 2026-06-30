@@ -512,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v39-assistant-fallback-cache | Build 2026.06.30.01 | Cache v39</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v40-assistant-local-status | Build 2026.06.30.02 | Cache v40</div>
     </div>
   </div>
 
@@ -567,7 +567,7 @@ const AI_PROFILES={
       {provider:'grok',model:'grok-4.3',label:'Grok 4.3'}
     ],
     light:[
-      {provider:'grok',model:'grok-4-1-fast-non-reasoning',reasoning:'none',label:'Grok 4.1 Fast'}
+      {provider:'grok',model:'grok-4.3',label:'Grok 4.3'}
     ]
   },
   groq:{
@@ -1283,6 +1283,35 @@ function localAssistantOpTimeAnswer(q){
   if(cap.shiftCount>1) lines.push(`- Shift coverage: ${cap.shiftCount} shifts`);
   lines.push(`- Load: ${cap.days.toFixed(1)} working day(s)`);
   lines.push(`State: ${opStateLabel(op)}`);
+  return lines.join('\n');
+}
+function localAssistantJobStatusAnswer(q){
+  const text=String(q||'').toLowerCase().trim();
+  const wantsStatus=/^(status|job status|summary|shop status|where are we|are we on track\??|on track\??)$/.test(text)
+    || /\b(are we on track|job status|shop status|where are we|status summary)\b/.test(text);
+  if(!wantsStatus) return '';
+  const tp=parseInt(document.getElementById('totalParts')?.value)||0;
+  const woQty=workOrderQty();
+  const travelerStats=travelerReadinessStats();
+  const completed=completedOperationStats();
+  const stats=operationHourStats(tp||woQty);
+  const forecast=timeFrameForecast(tp||woQty,stats);
+  const lines=[
+    'Local planner status:',
+    `- Planned parts: ${tp||'not set'}`,
+    `- Traveler quantity: ${woQty}`,
+    `- Travelers by op: ${travelerStats.currentText}`,
+    `- Ready to advance: ${travelerStats.readyText}`,
+    `- Completed op steps: ${completed.total}/${completed.possible}`
+  ];
+  if(stats?.bottleneckOp){
+    lines.push(`- Bottleneck: OP ${stats.bottleneckOp.num}, ${stats.bottleneck.toFixed(1)} hr`);
+  }
+  if(forecast?.projectedFinish){
+    lines.push(`- Projected finish: ${forecast.projectedFinish}`);
+    if(forecast.margin!==null) lines.push(`- Deadline margin: ${forecast.margin} working day(s)`);
+  }
+  if(!workOrders.length) lines.push('- No travelers entered yet.');
   return lines.join('\n');
 }
 function localAssistantHelpAnswer(q){
@@ -2322,7 +2351,7 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
-  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantHelpAnswer(q);
+  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantHelpAnswer(q);
   if(localAnswer){
     addMsg(localAnswer,'bot');
     aiBusy=false;
@@ -2345,16 +2374,21 @@ async function askAI(){
   const thinking=addMsg('Thinking...','thinking');
   try{
     const prompt=getJobContext();
-    let result=null,lastErr='';
+    let result=null;
+    const failures=[];
     for(const profile of plan){
       thinking.textContent=`Trying ${profile.label}...`;
-      result=await callAIProfile(profile,prompt,q);
+      try{
+        result=await callAIProfile(profile,prompt,q);
+      }catch(e){
+        result={ok:false,message:`${profile.label} network/browser request failed`};
+      }
       if(result.ok) break;
-      lastErr=result.message;
+      failures.push(`${profile.label}: ${result.message||'request failed'}`);
     }
     thinking.remove();
     if(!result||!result.ok){
-      addMsg(lastErr||'All available AI routes are unavailable. Try again later, or switch provider/mode under API Key.','err');
+      addMsg(`All available AI routes failed.\n${failures.map(x=>'- '+x).join('\n')}\nTry another provider, check the saved API keys, or use local planner questions like Status, Move Qty, Reports, or OP time.`, 'err');
       return;
     }
     addMsg(result.text,'bot');
