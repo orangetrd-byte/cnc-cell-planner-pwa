@@ -2351,7 +2351,6 @@ async function askAI(){
       result=await callAIProfile(profile,prompt,q);
       if(result.ok) break;
       lastErr=result.message;
-      if(!result.quota) break;
     }
     thinking.remove();
     if(!result||!result.ok){
