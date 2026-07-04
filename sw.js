@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v41-local-risk-answer';
+const CACHE_NAME = 'cnc-cell-planner-v42-save-cache-safety';
 const APP_SHELL = [
   './',
   './index.html',
@@ -31,7 +31,8 @@ self.addEventListener('message', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  const freshFirst = event.request.mode === 'navigate' || /\.(html|js|css|json)$/i.test(url.pathname);
+  const isNavigation = event.request.mode === 'navigate';
+  const freshFirst = isNavigation || /\.(html|js|css|json)$/i.test(url.pathname);
 
   if (freshFirst) {
     event.respondWith(
@@ -39,7 +40,7 @@ self.addEventListener('fetch', event => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
-      }).catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
+      }).catch(() => caches.match(event.request).then(cached => cached || (isNavigation ? caches.match('./index.html') : undefined)))
     );
     return;
   }
@@ -49,6 +50,6 @@ self.addEventListener('fetch', event => {
       const copy = response.clone();
       caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
       return response;
-    }).catch(() => caches.match('./index.html')))
+    }))
   );
 });

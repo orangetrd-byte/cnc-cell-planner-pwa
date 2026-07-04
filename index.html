@@ -512,7 +512,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v41-local-risk-answer | Build 2026.06.30.03 | Cache v41</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v42-save-cache-safety | Build 2026.07.04.01 | Cache v42</div>
     </div>
   </div>
 
@@ -868,13 +868,32 @@ function workDays(s,e,dpw,hols){
 }
 
 // STORAGE
-function save(){
+let saveTimer=null;
+let saveErrorShown=false;
+function getPersistedState(){
   const fields=['partNum','jobNum','machine','totalParts','shiftHours','daysPerWeek','breakMins','shiftsPerDay','startDate','endDate','doneParts','scrapParts','actualCycle','actualCycleUnit','uptimePct','progressDate'];
   const job={};
   fields.forEach(id=>{ const el=document.getElementById(id); if(el) job[id]=el.value; });
-  try{ localStorage.setItem(SK,JSON.stringify({job,ops,tools,holidays,workOrders,opC,toolC,woC})); }catch(e){}
-  updateSummary();
+  return {job,ops,tools,holidays,workOrders,opC,toolC,woC};
 }
+function persistNow(){
+  try{
+    localStorage.setItem(SK,JSON.stringify(getPersistedState()));
+  }catch(e){
+    console.warn('Planner save failed:',e);
+    if(!saveErrorShown){
+      saveErrorShown=true;
+      alert('Planner could not save locally. Export a backup now, then free browser storage before continuing.');
+    }
+  }
+}
+function save(){
+  updateSummary();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(persistNow,300);
+}
+window.addEventListener('pagehide',persistNow);
+window.addEventListener('beforeunload',persistNow);
 
 function load(){
   try{
