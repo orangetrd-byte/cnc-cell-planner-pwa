@@ -513,7 +513,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v46-insert-order-check | Build 2026.07.08.04 | Cache v46</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v47-local-dispatch-check | Build 2026.07.08.05 | Cache v47</div>
     </div>
   </div>
 
@@ -1350,6 +1350,70 @@ function localAssistantJobStatusAnswer(q){
     if(forecast.margin!==null) lines.push(`- Deadline margin: ${forecast.margin} working day(s)`);
   }
   if(!workOrders.length) lines.push('- No travelers entered yet.');
+  return lines.join('\n');
+}
+function localAssistantDispatchAnswer(q){
+  const text=String(q||'').toLowerCase();
+  const opMatch=text.match(/\bop\s*#?\s*(\d+)\b/);
+  if(!opMatch) return '';
+  const wants=/\b(switch|run|ship|dispatch|should|next|priority|before end|end of month|eom)\b/.test(text);
+  if(!wants) return '';
+  const target=String(opMatch[1]);
+  const op=ops.find(o=>String(o.num)===target);
+  if(!op) return `Local dispatch check:\n- OP ${target} is not in the operation list.`;
+  const targetKey='OP '+target;
+  const stats=travelerReadinessStats();
+  const current=stats.currentByOp[targetKey]||{count:0,qty:0};
+  const ready=stats.readyByTarget[targetKey]||{count:0,qty:0};
+  const route=routeOps().map(o=>String(o.num));
+  const idx=route.indexOf(target);
+  const prev=idx>0?route[idx-1]:'';
+  let waitingPrev={count:0,qty:0};
+  if(prev){
+    workOrders.forEach(raw=>{
+      const w=normalizeWO(raw);
+      if(String(w.currentOp)!==prev) return;
+      const qty=Math.max(0,parseInt(w.qty)||0);
+      if(!woCanAdvance(w)){ waitingPrev.count++; waitingPrev.qty+=qty; }
+    });
+  }
+  const runnableQty=current.qty+ready.qty;
+  const cap=runnableQty>0?opCapacity(op,runnableQty,true,1,false):null;
+  const cycle=opCycleMin(op);
+  const today=iso(new Date());
+  const dpw=parseInt(document.getElementById('daysPerWeek')?.value)||5;
+  const hset=new Set(holidays);
+  const endOfMonth=new Date();
+  endOfMonth.setMonth(endOfMonth.getMonth()+1,0);
+  const monthEndIso=iso(endOfMonth);
+  const explicitDeadline=/\b(end of month|before month end|before the end of month|eom)\b/.test(text)?monthEndIso:(document.getElementById('endDate')?.value||monthEndIso);
+  const daysLeft=workDays(today,explicitDeadline,dpw,hset);
+  const availableHours=daysLeft!==null?daysLeft*shiftsPerDay()*netShiftMinutes()/60:null;
+  const lines=[`Local dispatch check: OP ${target}`];
+  lines.push(`- OP ${target} cycle from Operations: ${formatCycleTime(cycle)}/part.`);
+  lines.push('- This does not use the Progress page Actual Cycle Time field.');
+  lines.push(`- Currently at OP ${target}: ${current.count} traveler(s), ${current.qty} pcs.`);
+  lines.push(`- Ready to move into OP ${target}: ${ready.count} traveler(s), ${ready.qty} pcs.`);
+  if(prev) lines.push(`- Waiting at OP ${prev}: ${waitingPrev.count} traveler(s), ${waitingPrev.qty} pcs.`);
+  if(cap){
+    lines.push(`- Runnable OP ${target} quantity now: ${runnableQty} pcs.`);
+    lines.push(`- OP ${target} load for that quantity: ${(cap.totalMin/60).toFixed(1)} hr (${cap.days.toFixed(1)} working day(s) at ${opShiftLabel(op)}).`);
+  }else{
+    lines.push(`- Runnable OP ${target} quantity now: 0 pcs.`);
+  }
+  if(availableHours!==null){
+    lines.push(`- Working time through ${explicitDeadline}: ${availableHours.toFixed(1)} hr.`);
+  }
+  if(runnableQty<=0){
+    lines.push(`- Recommendation: do not switch to OP ${target} yet. Nothing is released or sitting there to run.`);
+  }else if(ready.qty<=0&&current.qty>0){
+    lines.push(`- Recommendation: OP ${target} has work sitting there now. Run it if the machine/setup is available, but it will not pull more parts until upstream releases more.`);
+  }else{
+    lines.push(`- Recommendation: OP ${target} is a valid dispatch candidate. Advance the ready travelers, then run OP ${target}.`);
+  }
+  if(availableHours!==null&&cap&&cap.totalMin/60>availableHours){
+    lines.push(`- Deadline warning: OP ${target} load alone is over the available working hours to ${explicitDeadline}.`);
+  }
   return lines.join('\n');
 }
 function localAssistantScheduleRiskAnswer(q){
@@ -2485,7 +2549,7 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
-  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantInsertInventoryAnswer(q)||localAssistantHelpAnswer(q);
+  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantDispatchAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantInsertInventoryAnswer(q)||localAssistantHelpAnswer(q);
   if(localAnswer){
     addMsg(localAnswer,'bot');
     aiBusy=false;

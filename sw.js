@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v46-insert-order-check';
+const CACHE_NAME = 'cnc-cell-planner-v47-local-dispatch-check';
 const APP_SHELL = [
   './',
   './index.html',
