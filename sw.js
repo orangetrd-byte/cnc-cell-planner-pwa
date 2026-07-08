@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v44-finished-job-quantity';
+const CACHE_NAME = 'cnc-cell-planner-v45-insert-inventory-capacity';
 const APP_SHELL = [
   './',
   './index.html',

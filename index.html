@@ -513,7 +513,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v44-finished-job-quantity | Build 2026.07.08.02 | Cache v44</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v45-insert-inventory-capacity | Build 2026.07.08.03 | Cache v45</div>
     </div>
   </div>
 
@@ -1382,6 +1382,49 @@ function localAssistantScheduleRiskAnswer(q){
   lines.push(`- Current WIP: ${travelerStats.currentText}.`);
   lines.push(`- Ready to advance: ${travelerStats.readyText}.`);
   lines.push(`- Completed op steps: ${completed.total}/${completed.possible}.`);
+  return lines.join('\n');
+}
+function localAssistantInsertInventoryAnswer(q){
+  const text=String(q||'').toLowerCase();
+  const wants=/\b(inserts?|tooling|special[\s-]*order|inventory|on[\s-]*hand)\b/.test(text)
+    && /\b(how many|how much|parts?|make|run|can|available|cover|support|on[\s-]*hand|inventory)\b/.test(text);
+  if(!wants) return '';
+  const insertLines=tools.filter(t=>String(t.type||'insert').toLowerCase()==='insert');
+  const purchaseLines=insertLines.filter(t=>!(t.supply==='inhouse'||t.inHouse===true));
+  const usable=purchaseLines.map(t=>{
+    const calc=toolOrderCalc(t,parseInt(document.getElementById('totalParts')?.value)||0);
+    const onHandPacks=Math.max(0,parseFloat(t.onhand)||0);
+    const packSize=Math.max(1,parseInt(t.unit)||1);
+    const onHandPieces=Math.floor(onHandPacks*packSize);
+    const usage=Math.max(0,parseFloat(t.usage)||0);
+    const parts=usage>0?Math.floor(onHandPieces/usage):Infinity;
+    return {t,calc,onHandPacks,packSize,onHandPieces,usage,parts};
+  }).filter(x=>x.usage>0);
+  const inHouseCount=insertLines.length-purchaseLines.length;
+  if(!insertLines.length) return 'Local insert inventory:\n- No insert tooling lines are entered yet.';
+  if(!usable.length) return `Local insert inventory:\n- No purchase/special-order insert lines have both usage per part and on-hand packs entered.\n- In-house insert lines ignored: ${inHouseCount}.`;
+  const finite=usable.filter(x=>Number.isFinite(x.parts));
+  const limiting=finite.reduce((min,x)=>!min||x.parts<min.parts?x:min,null);
+  const totalParts=parseInt(document.getElementById('totalParts')?.value)||0;
+  const label=x=>`${x.t.pocket?x.t.pocket+' - ':''}${x.t.desc||'Unnamed insert'}${x.t.op?' (OP '+x.t.op+')':''}`;
+  const lines=[
+    'Local insert inventory:',
+    `- Purchase/special-order insert lines counted: ${usable.length}`,
+    `- In-house insert lines ignored: ${inHouseCount}`,
+    `- Current on-hand purchase inserts can support: ${limiting.parts.toLocaleString()} finished part(s)`,
+    `- Limiting insert: ${label(limiting)}`,
+    `- Math: ${limiting.onHandPacks} pack(s) x ${limiting.packSize}/pack = ${limiting.onHandPieces} insert(s); ${limiting.usage}/part = ${limiting.parts.toLocaleString()} part(s)`
+  ];
+  if(totalParts){
+    lines.push(limiting.parts>=totalParts
+      ? `- Job quantity ${totalParts.toLocaleString()}: covered by current on-hand purchase inserts.`
+      : `- Job quantity ${totalParts.toLocaleString()}: short by ${(totalParts-limiting.parts).toLocaleString()} part(s) before an insert line runs out.`);
+  }
+  const next=finite.slice().sort((a,b)=>a.parts-b.parts).slice(1,4);
+  if(next.length){
+    lines.push('- Next limits:');
+    next.forEach(x=>lines.push(`  ${label(x)}: ${x.parts.toLocaleString()} part(s)`));
+  }
   return lines.join('\n');
 }
 function localAssistantHelpAnswer(q){
@@ -2422,7 +2465,7 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
-  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantHelpAnswer(q);
+  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantInsertInventoryAnswer(q)||localAssistantHelpAnswer(q);
   if(localAnswer){
     addMsg(localAnswer,'bot');
     aiBusy=false;
