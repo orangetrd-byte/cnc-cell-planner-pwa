@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v42-save-cache-safety';
+const CACHE_NAME = 'cnc-cell-planner-v43-recovery-cycle-fix';
 const APP_SHELL = [
   './',
   './index.html',

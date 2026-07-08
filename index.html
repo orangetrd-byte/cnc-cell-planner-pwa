@@ -352,6 +352,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 
   <div class="card page-section" data-page="progress">
     <div class="card-header green"><span class="badge green">LIVE</span><h2>Progress Tracker &amp; Bottleneck Reality Check</h2></div>
+    <p class="tip" style="margin:0 18px 12px">Tracks any active job: good parts, scrap, actual cycle time, uptime, remaining pace, and whether the job is on schedule.</p>
     <div class="card-body">
       <div class="qbox">
         <div class="frow">
@@ -512,7 +513,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v42-save-cache-safety | Build 2026.07.04.01 | Cache v42</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v43-recovery-cycle-fix | Build 2026.07.08.01 | Cache v43</div>
     </div>
   </div>
 
@@ -870,6 +871,7 @@ function workDays(s,e,dpw,hols){
 // STORAGE
 let saveTimer=null;
 let saveErrorShown=false;
+const SK_RECOVERY=SK+'-recovery';
 function getPersistedState(){
   const fields=['partNum','jobNum','machine','totalParts','shiftHours','daysPerWeek','breakMins','shiftsPerDay','startDate','endDate','doneParts','scrapParts','actualCycle','actualCycleUnit','uptimePct','progressDate'];
   const job={};
@@ -878,7 +880,9 @@ function getPersistedState(){
 }
 function persistNow(){
   try{
-    localStorage.setItem(SK,JSON.stringify(getPersistedState()));
+    const payload=JSON.stringify({...getPersistedState(),savedAt:new Date().toISOString()});
+    localStorage.setItem(SK_RECOVERY,payload);
+    localStorage.setItem(SK,payload);
   }catch(e){
     console.warn('Planner save failed:',e);
     if(!saveErrorShown){
@@ -890,20 +894,36 @@ function persistNow(){
 function save(){
   updateSummary();
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(persistNow,300);
+  saveTimer=setTimeout(persistNow,150);
 }
-window.addEventListener('pagehide',persistNow);
-window.addEventListener('beforeunload',persistNow);
+function flushSave(){ clearTimeout(saveTimer); persistNow(); }
+window.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushSave(); });
+window.addEventListener('pagehide',flushSave);
+window.addEventListener('beforeunload',flushSave);
 
+function parseStoredState(raw){
+  if(!raw) return null;
+  try{ return JSON.parse(raw); }catch(e){ return null; }
+}
+function pickStoredState(){
+  const primary=parseStoredState(localStorage.getItem(SK));
+  const recovery=parseStoredState(localStorage.getItem(SK_RECOVERY));
+  if(primary&&recovery){
+    const p=Date.parse(primary.savedAt||'')||0;
+    const r=Date.parse(recovery.savedAt||'')||0;
+    return r>p?recovery:primary;
+  }
+  return primary||recovery;
+}
 function load(){
   try{
-    const raw=localStorage.getItem(SK);
-    if(!raw) return;
-    const st=JSON.parse(raw);
+    const st=pickStoredState();
+    if(!st) return;
     if(st.job) Object.entries(st.job).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
     ops=(st.ops||[]).map(o=>({...o,moveQty:o.moveQty||1}));
     tools=st.tools||[]; holidays=st.holidays||[]; workOrders=(st.workOrders||[]).map(normalizeWO);
     opC=st.opC||ops.length; toolC=st.toolC||tools.length; woC=st.woC||workOrders.length;
+    persistNow();
   }catch(e){}
 }
   function currentBackupState(){
@@ -938,7 +958,7 @@ function load(){
 
 function exportBackup(){
   try{
-    save();
+    flushSave();
     const backup=currentBackupState();
     const text=JSON.stringify(backup,null,2);
     const blob=new Blob([text],{type:'application/json'});
@@ -987,7 +1007,7 @@ function applyBackupState(st){
   renderOps();
   renderTools();
   recalc();
-  save();
+  flushSave();
 }
 
 function importBackup(input){
@@ -1032,7 +1052,7 @@ function backupAndReset(){
 }
 function clearAllData(){
   if(!confirm('Clear all data and start fresh?')) return;
-  try{ localStorage.removeItem(SK); }catch(e){}
+  try{ localStorage.removeItem(SK); localStorage.removeItem(SK_RECOVERY); }catch(e){}
   ops=[]; tools=[]; holidays=[]; workOrders=[]; opC=0; toolC=0; woC=0;
   ['partNum','jobNum','machine','totalParts','startDate','endDate','doneParts','scrapParts','actualCycle','progressDate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('shiftHours').value='8';
@@ -1044,7 +1064,6 @@ function clearAllData(){
   seedGovHolidays();
   renderH(); renderWOs(); renderOps(); renderTools(); recalc();
 }
-
 // HOLIDAYS
 function loadGovHolidays(){
   holidays=[...new Set([...holidays,...defaultGovHolidays()])].sort();
@@ -2213,12 +2232,13 @@ Total WO Quantity: ${workOrderQty()}
 Progress As Of: ${asOf}
 Good Parts Completed: ${done}
 Scrap/Rework Parts: ${scrap}
-Actual Cycle Time: ${actualRaw?actualRaw+' '+actualUnit+'/part':'not entered'}
+Actual Cycle Time Entered: ${actualRaw?actualRaw+' '+actualUnit+'/part':'not entered'}
+Actual Cycle Time Normalized: ${actualRaw?(actualRaw*(actualUnit==='hr'?60:1)).toFixed(2)+' min/part':'not entered'}
 Machine Uptime Estimate: ${uptime}%
 Operations: ${opsText}
 Tooling: ${toolsText}
 
-Answer the user's question concisely and practically, like a knowledgeable shop foreman would. Use numbers from the job data above when relevant.
+Answer the user's question concisely and practically, like a knowledgeable shop foreman would. Use numbers from the job data above when relevant. Treat Actual Cycle Time as the real runtime per finished part; do not confuse it with Cycle Time Needed, which is only the maximum allowed cycle to meet the deadline. When doing runtime math, use Actual Cycle Time Normalized in min/part.
 If asked "ready for OP X", use "Ready to Advance by Target Op", not completed operation history. Completed history only means the traveler has already finished that operation at some point.
 Format for a phone screen: short sections, short bullet lines, no tables. Use plain text; avoid Markdown unless a brief heading or bullet list improves scanability.`;
 }
