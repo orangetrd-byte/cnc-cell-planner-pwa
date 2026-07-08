@@ -356,7 +356,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
     <div class="card-body">
       <div class="qbox">
         <div class="frow">
-          <div class="field"><label>Good Parts Completed</label><input type="number" id="doneParts" min="0" placeholder="0" oninput="recalc()"></div>
+          <div class="field"><label>Finished Job Quantity</label><input type="number" id="doneParts" min="0" placeholder="0" oninput="recalc()"></div>
           <div class="field"><label>Scrap / Rework Parts</label><input type="number" id="scrapParts" min="0" placeholder="0" oninput="recalc()"></div>
         </div>
         <div class="frow" style="margin-top:10px">
@@ -513,7 +513,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v43-recovery-cycle-fix | Build 2026.07.08.01 | Cache v43</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v44-finished-job-quantity | Build 2026.07.08.02 | Cache v44</div>
     </div>
   </div>
 
@@ -2230,7 +2230,7 @@ Blocked / Waiting Travelers by Status: ${travelerStats.blockedText}
 Traveler Batches: ${batchSummary.text||'None defined'}
 Total WO Quantity: ${workOrderQty()}
 Progress As Of: ${asOf}
-Good Parts Completed: ${done}
+Finished Job Quantity: ${done}
 Scrap/Rework Parts: ${scrap}
 Actual Cycle Time Entered: ${actualRaw?actualRaw+' '+actualUnit+'/part':'not entered'}
 Actual Cycle Time Normalized: ${actualRaw?(actualRaw*(actualUnit==='hr'?60:1)).toFixed(2)+' min/part':'not entered'}
