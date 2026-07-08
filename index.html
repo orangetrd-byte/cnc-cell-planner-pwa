@@ -352,7 +352,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
 
   <div class="card page-section" data-page="progress">
     <div class="card-header green"><span class="badge green">LIVE</span><h2>Progress Tracker &amp; Bottleneck Reality Check</h2></div>
-    <p class="tip" style="margin:0 18px 12px">Tracks any active job: good parts, scrap, actual cycle time, uptime, remaining pace, and whether the job is on schedule.</p>
+    <p class="tip" style="margin:0 18px 12px">Tracks any active job: finished job quantity, scrap, actual cycle time, uptime, remaining pace, and whether the job is on schedule.</p>
     <div class="card-body">
       <div class="qbox">
         <div class="frow">
@@ -1911,7 +1911,7 @@ function updateProgressReality(){
   result.className=cls;
   result.innerHTML=`
     <strong>${headline}</strong><br>
-    Planned by now: <b>${plannedByNow.toLocaleString()}</b> good parts &nbsp;|&nbsp; Actual good: <b>${done.toLocaleString()}</b> &nbsp;|&nbsp; Scrap/rework: <b>${scrap.toLocaleString()}</b><br>
+    Planned finished qty by now: <b>${plannedByNow.toLocaleString()}</b> &nbsp;|&nbsp; Finished job qty: <b>${done.toLocaleString()}</b> &nbsp;|&nbsp; Scrap/rework: <b>${scrap.toLocaleString()}</b><br>
     Remaining working days: <b>${remainingDays}</b> &nbsp;|&nbsp; Remaining shifts: <b>${remainingShifts}</b> &nbsp;|&nbsp; Required from here: <b>${reqPace>0?reqPace.toFixed(2):'--'} parts/shift</b> &nbsp;|&nbsp; Needed cycle: <b>${reqCycle>0?formatCycleTime(reqCycle)+'/part':'--'}</b><br>
     Reality capacity using ${cycleSource}: <b>${cap>0?cap.toLocaleString():'--'} parts/shift</b> at <b>${Math.round(uptime*100)}%</b> uptime. ${finishText}
     ${projectedLate?`<br><span style="color:var(--red)">Projected finish is after the deadline (${e}). Add overtime, improve cycle time, or add capacity.</span>`:''}
