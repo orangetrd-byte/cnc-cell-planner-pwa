@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cnc-cell-planner-v47-local-dispatch-check';
+const CACHE_NAME = 'cnc-cell-planner-v48-op-time-guard';
 const APP_SHELL = [
   './',
   './index.html',

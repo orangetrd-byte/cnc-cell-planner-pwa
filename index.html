@@ -513,7 +513,7 @@ tbody td input:focus,tbody td select:focus{border-bottom-color:var(--accent)}
         <input type="text" id="ai-input" placeholder="e.g. Are we on track? What if we add 50 parts?" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:9px 11px;font-family:var(--sans);font-size:13px;outline:none" onkeydown="if(event.key==='Enter') askAI()">
         <button class="btn btn-green" onclick="askAI()" id="ask-btn">Ask</button>
       </div>
-      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v47-local-dispatch-check | Build 2026.07.08.05 | Cache v47</div>
+      <div class="tip" style="margin-top:12px;font-family:var(--mono)" id="app-version-info">MGP | Version v48-op-time-guard | Build 2026.07.18.01 | Cache v48</div>
     </div>
   </div>
 
@@ -525,6 +525,7 @@ let woSearch='';
 let opC=0, toolC=0, woC=0;
 let aiBusy=false;
 let aiLastAskAt=0;
+let aiLastReferencedOp='';
 const SK='cnc-v1';
 const GOV_HOLIDAY_SPAN=2;
 const WO_STATUS_OPTIONS=['Not Started','In Process','Waiting Inspection','Inspection Passed','Inspection Rejected','Inspection Hold','Hold','Complete'];
@@ -1296,14 +1297,45 @@ function localAssistantOpStatusAnswer(q){
   if(ready.qty===0) lines.push(`Nothing is released for OP ${target} yet.`);
   return lines.join('\n');
 }
-function localAssistantOpTimeAnswer(q){
+function localAssistantOpWindowAnswer(q){
   const text=String(q||'').toLowerCase();
-  const opMatch=text.match(/\bop\s*#?\s*(\d+)\b/);
-  if(!opMatch) return '';
-  if(!/\b(hours?|hrs?|time|take|duration|long|days?|shifts?)\b/.test(text)) return '';
-  const target=String(opMatch[1]);
+  const asksParts=/\b(how many|parts?|pcs?|pieces?|complete|completed|finish|finished)\b/.test(text);
+  const windowMatch=text.match(/\b(?:next\s+)?(\d+(?:\.\d+)?)\s*(working\s*)?(days?|shifts?)\b/);
+  if(!asksParts||!windowMatch) return '';
+  const opMatch=text.match(/\bop(?:eration)?\s*#?\s*(\d+)\b/)||text.match(/\b(?:at|on)\s+(\d+)\b/);
+  const target=opMatch?String(opMatch[1]):aiLastReferencedOp;
+  if(!target) return '';
   const op=ops.find(o=>String(o.num)===target);
   if(!op) return `I do not see OP ${target} in the operation list.`;
+  aiLastReferencedOp=target;
+  const amount=parseFloat(windowMatch[1]);
+  const isDays=windowMatch[3].startsWith('day');
+  const availableShifts=isDays?amount*opShiftCount(op):amount;
+  const availableMin=availableShifts*netShiftMinutes();
+  const setup=opSetupRemainingMin(op,true);
+  const breakdown=opBreakdownRemainingMin(op);
+  const cycle=opCycleMin(op);
+  if(cycle<=0) return `OP ${target} needs cycle time before I can calculate output.`;
+  const capacity=Math.max(0,Math.floor((availableMin-setup-breakdown)/cycle));
+  const remaining=opRemainingQty(op,capacity);
+  const planned=Math.min(capacity,remaining);
+  const lines=[
+    `OP ${target} output for the next ${amount} ${isDays?'working day(s)':'shift(s)'}:`,
+    `- Available machine time: ${(availableMin/60).toFixed(1)} hr`,
+    `- Capacity at ${formatCycleTime(cycle)}/part: ${capacity} part(s)`,
+    `- Expected completion: ${planned} of ${remaining} remaining part(s)`
+  ];
+  if(planned>=remaining) lines.push(`- OP ${target} should be complete within that window.`);
+  return lines.join('\n');
+}function localAssistantOpTimeAnswer(q){
+  const text=String(q||'').toLowerCase();
+  const opMatch=text.match(/\bop(?:eration)?\s*#?\s*(\d+)\b/)||text.match(/\b(?:at|on)\s+(\d+)\b/);
+  const target=opMatch?String(opMatch[1]):aiLastReferencedOp;
+  if(!target) return '';
+  if(!/\b(hours?|hrs?|time|take|duration|long|days?|shifts?|when|finish|finished|done|complete|completed)\b/.test(text)) return '';
+  const op=ops.find(o=>String(o.num)===target);
+  if(!op) return `I do not see OP ${target} in the operation list.`;
+  aiLastReferencedOp=target;
   const partsMatch=text.match(/\b(\d+)\s*(?:pcs?|pieces?|parts?|travelers?)\b/);
   const explicitParts=partsMatch?parseInt(partsMatch[1]):0;
   const fallback=parseInt(document.getElementById('totalParts')?.value)||workOrderQty()||0;
@@ -1318,8 +1350,9 @@ function localAssistantOpTimeAnswer(q){
     `- Breakdown: ${(cap.breakdown/60).toFixed(1)} hr`,
     `- Total: ${(cap.totalMin/60).toFixed(1)} hr`
   ];
-  if(cap.shiftCount>1) lines.push(`- Shift coverage: ${cap.shiftCount} shifts`);
-  lines.push(`- Load: ${cap.days.toFixed(1)} working day(s)`);
+  if(cap.shiftCount>1) lines.push(`- Shift coverage: ${cap.shiftCount} shifts/day`);
+  lines.push(`- Exact load: ${cap.days.toFixed(1)} working day(s)`);
+  lines.push(`- Plan on: ${cap.calendarDays} working day(s) / ${cap.shifts} shift(s)`);
   lines.push(`State: ${opStateLabel(op)}`);
   return lines.join('\n');
 }
@@ -2365,7 +2398,7 @@ Machine Uptime Estimate: ${uptime}%
 Operations: ${opsText}
 Tooling: ${toolsText}
 
-Answer the user's question concisely and practically, like a knowledgeable shop foreman would. Use numbers from the job data above when relevant. Treat Actual Cycle Time as the real runtime per finished part; do not confuse it with Cycle Time Needed, which is only the maximum allowed cycle to meet the deadline. When doing runtime math, use Actual Cycle Time Normalized in min/part.
+Answer the user's question concisely and practically, like a knowledgeable shop foreman would. Use numbers from the job data above when relevant. For a question about a specific operation, always use that operation's cycle, remaining quantity, state, setup, breakdown, and shift coverage from Operations; never use Actual Cycle Time for operation-specific runtime math. Actual Cycle Time is job-wide and may only be used for whole-job production pace questions. Do not confuse Actual Cycle Time with Cycle Time Needed, which is only the maximum allowed cycle to meet the deadline. Report fractional load and also round up to the practical whole number of shifts or working days needed to finish.
 If asked "ready for OP X", use "Ready to Advance by Target Op", not completed operation history. Completed history only means the traveler has already finished that operation at some point.
 Format for a phone screen: short sections, short bullet lines, no tables. Use plain text; avoid Markdown unless a brief heading or bullet list improves scanability.`;
 }
@@ -2549,7 +2582,7 @@ async function askAI(){
   input.disabled=true;
   input.value='';
   addMsg(q,'user');
-  const localAnswer=localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantDispatchAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantInsertInventoryAnswer(q)||localAssistantHelpAnswer(q);
+  const localAnswer=localAssistantOpWindowAnswer(q)||localAssistantOpTimeAnswer(q)||localAssistantOpStatusAnswer(q)||localAssistantJobStatusAnswer(q)||localAssistantDispatchAnswer(q)||localAssistantScheduleRiskAnswer(q)||localAssistantInsertInventoryAnswer(q)||localAssistantHelpAnswer(q);
   if(localAnswer){
     addMsg(localAnswer,'bot');
     aiBusy=false;
